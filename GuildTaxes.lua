@@ -10,6 +10,18 @@ local SLASH_COMMAND = "gt"
 local CHAT_PREFIX = "|cffb0c4de" .. GT_CHAT_PREFIX .. ":|r "
 local MESSAGE_PREFIX = "GT"
 
+local DEFAULTS = {
+	profile = {
+		version = 1;
+		debug = false;
+		verbose = false;
+		logging = true;
+		rate = 0.05;
+		amount = 0;
+	}
+}
+
+
 -- Instantiate
 GuildTaxes = LibStub("AceAddon-3.0"):NewAddon("GuildTaxes", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0")
 
@@ -18,22 +30,50 @@ GuildTaxes = LibStub("AceAddon-3.0"):NewAddon("GuildTaxes", "AceConsole-3.0", "A
 -- Initialization
 ------------------------
 function GuildTaxes:OnInitialize()
-	self.isMailboxOpened = false
-	self.isGuildBankOpened = false
-	self.db = LibStub("AceDB-3.0"):New("GuildTaxesDB")
+	-- User's settings
+	self.db = LibStub("AceDB-3.0"):New("GuildTaxesDB", DEFAULTS, true)
+
+	-- Local state vars
+	self.isMailOpened = false
+	self.isBankOpened = false
 end
 
 
 ------------------------
 -- Utilites
 ------------------------
+function GuildTaxes:PrintAmount()
+end
+
 function GuildTaxes:LogTransaction()
 end
 
-
 function GuildTaxes:Debug(message, n)
-	if (DEVELOPMENT or self.debugging) then
+	if (DEVELOPMENT or self.db.debug) then
 		self:Print(CHAT_PREFIX .. "... " .. message)
+	end
+end
+
+function GuildTaxes:UpdateGuildInfo()
+	if (IsInGuild() and false) then
+		if not guild_id then
+			-- returns: guildName, guildRankName, guildRankIndex
+			guild, realm = GetGuildInfo("player"), GetRealmName()
+
+			if guild and realm then
+				guild_id = format("%s-%s", guild, realm):lower()
+			end
+		end
+
+		if guild_id then
+			PAY_MY_TAX_SV[guild_id] = PAY_MY_TAX_SV[guild_id] or 0
+			TAX_MOD = PAY_MY_TAX_SV["pmt_tax_mod"]
+
+			pmt:print(format("Платим %i%% налогов в гильдию |cffffff00%s|r из мира %s", 100 * TAX_MOD, guild, realm))
+			self:print_tax()
+		end
+	else
+		guild_id = nil
 	end
 end
 
@@ -43,12 +83,27 @@ end
 ------------------------
 function GuildTaxes:OnSlashCommand(input)
 	self:Debug("Slash command: " .. input)
+
+	local cmd = {}
+	for word in input:gmatch("%S+") do
+		table.insert(cmd, word)
+	end
+
+	local idx, operation = next(cmd)
+
+	if operation == nil then
+	else
+		self:Debug("Unknown command: " .. operation)
+	end
+
 end
 
 
 ------------------------
 -- Communication events
 ------------------------
+GuildTaxes.CommEvents = {}
+
 function GuildTaxes:OnCommReceived(prefix, message, distribution, sender)
 	self:Debug("Communication message recieved")
 end
