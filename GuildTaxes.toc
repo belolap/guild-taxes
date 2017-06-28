@@ -1,8 +1,17 @@
 ## Interface: 70200
 ## Author: Неогик@Галакронд
-## Version: 0.0.1
-## Title: |cff1784d1GuildTaxes|r
+## Version: 0.0.1-alpha
+## Title: |cff69ccf0Guild Taxes|r
+## Title-ruRU: |cff69ccf0Налоги гильдии|r
 ## Notes: Keep your guild bank full
+## Notes-ruRU: Пополняй гильдейский банк просто
 ## SavedVariables: GuildTaxesDB
 
-guild_taxes.lua
+# Libraries
+Libs\LibStub\LibStub.lua
+
+# Localization
+localization.ru.lua
+
+# Main module
+GuildTaxes.lua
