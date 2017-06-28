@@ -1,0 +1,8 @@
+## Interface: 70200
+## Author: Неогик@Галакронд
+## Version: 0.0.1
+## Title: |cff1784d1GuildTaxes|r
+## Notes: Keep your guild bank full
+## SavedVariables: GuildTaxesDB
+
+guild_taxes.lua
