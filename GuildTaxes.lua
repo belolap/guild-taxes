@@ -18,6 +18,8 @@ GuildTaxes = LibStub("AceAddon-3.0"):NewAddon("GuildTaxes", "AceConsole-3.0", "A
 -- Initialization
 ------------------------
 function GuildTaxes:OnInitialize()
+	self.isMailboxOpened = false
+	self.isGuildBankOpened = false
 	self.db = LibStub("AceDB-3.0"):New("GuildTaxesDB")
 end
 
@@ -72,11 +74,11 @@ function GuildTaxes:GUILDBANKFRAME_CLOSED( ... )
 end
 
 function GuildTaxes:MAIL_SHOW( ... )
-	self:Debug("Open mailbox")
+	self.isMailOpened = true
 end
 
 function GuildTaxes:MAIL_CLOSED( ... )
-	self:Debug("Close mailbox")
+	self.isMailOpened = false
 end
 
 function GuildTaxes:PLAYER_GUILD_UPDATE(unit)
