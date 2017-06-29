@@ -4,7 +4,6 @@
 --
 
 -- Addon settings
-local VERSION = "0.0.1"
 local DEVELOPMENT = false
 local SLASH_COMMAND = "gt"
 local MESSAGE_PREFIX = "GT"
