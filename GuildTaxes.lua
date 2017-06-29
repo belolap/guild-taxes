@@ -35,7 +35,6 @@ end
 -- Initialization
 --------------------------------------------------------------------------------
 function GuildTaxes:OnInitialize()
-
 	-- User's settings
 	self.db = LibStub("AceDB-3.0"):New("GuildTaxesDB", DEFAULTS, true)
 

@@ -8,7 +8,7 @@
 ## SavedVariables: GuildTaxesDB
 
 # Libraries
-Libs\LibStub\LibStub.lua
+embeds.xml
 
 # Localization
 localization.ru.lua
