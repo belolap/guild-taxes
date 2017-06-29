@@ -3,11 +3,10 @@
 -- Author: Неогик@Галакронд
 --
 
--- Build settings
+-- Addon settings
 local VERSION = "0.0.1"
 local DEVELOPMENT = true
 local SLASH_COMMAND = "gt"
-local CHAT_PREFIX = "|cffb0c4de" .. GT_CHAT_PREFIX .. ":|r "
 local MESSAGE_PREFIX = "GT"
 
 local DEFAULTS = {
@@ -16,92 +15,168 @@ local DEFAULTS = {
 		debug = false;
 		verbose = false;
 		logging = true;
-		rate = 0.05;
-		amount = 0;
-	}
+		autopay = true;
+	};
+	char = {
+		rate = 0.10;
+	};
 }
 
 
 -- Instantiate
-GuildTaxes = LibStub("AceAddon-3.0"):NewAddon("GuildTaxes", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0")
+GuildTaxes = LibStub("AceAddon-3.0"):NewAddon("GuildTaxes", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceHook-3.0")
+
+getmetatable(GuildTaxes).__tostring = function (self)
+	return GT_CHAT_PREFIX
+end
 
 
-------------------------
+--------------------------------------------------------------------------------
 -- Initialization
-------------------------
+--------------------------------------------------------------------------------
 function GuildTaxes:OnInitialize()
+
 	-- User's settings
 	self.db = LibStub("AceDB-3.0"):New("GuildTaxesDB", DEFAULTS, true)
 
 	-- Local state vars
+	self.guildId = nil
+	self.guildName = nil
+	self.guildRealm = nil
+	self.playerMoney = 0
 	self.isMailOpened = false
 	self.isBankOpened = false
+	self.isPayingTax = false
 end
 
 
-------------------------
+--------------------------------------------------------------------------------
 -- Utilites
-------------------------
-function GuildTaxes:PrintAmount()
-end
-
-function GuildTaxes:LogTransaction()
-end
-
+--------------------------------------------------------------------------------
 function GuildTaxes:Debug(message, n)
-	if (DEVELOPMENT or self.db.debug) then
-		self:Print(CHAT_PREFIX .. "... " .. message)
+	if (DEVELOPMENT or self.db.profile.debug) then
+		self:Print("|cff999999" .. message .. "|r")
 	end
 end
 
-function GuildTaxes:UpdateGuildInfo()
-	if (IsInGuild() and false) then
-		if not guild_id then
-			-- returns: guildName, guildRankName, guildRankIndex
-			guild, realm = GetGuildInfo("player"), GetRealmName()
+--------------------------------------------------------------------------------
+function GuildTaxes:PrintGeneralInfo()
+	if self.guildId then
+		self:Printf(GT_CHAT_GENERAL_INFO, 100 * self.db.char.rate, self.guildName, self.guildRealm)
+	end
+end
 
-			if guild and realm then
-				guild_id = format("%s-%s", guild, realm):lower()
-			end
-		end
-
-		if guild_id then
-			PAY_MY_TAX_SV[guild_id] = PAY_MY_TAX_SV[guild_id] or 0
-			TAX_MOD = PAY_MY_TAX_SV["pmt_tax_mod"]
-
-			pmt:print(format("Платим %i%% налогов в гильдию |cffffff00%s|r из мира %s", 100 * TAX_MOD, guild, realm))
-			self:print_tax()
+--------------------------------------------------------------------------------
+function GuildTaxes:PrintTaxes()
+	local message
+	if self.db.char[self.guildId].amount >= 1 then
+		message = format(GT_CHAT_TAX, GetCoinTextureString(self.db.char[self.guildId].amount))
+		if (self.isBankOpened and not self.db.profile.autopay) then
+			message = message .. " |Hitem:GuildTaxes:create:|h|cffff8000[" .. GT_CHAT_TAX_CLICK .. "]|r|h"
 		end
 	else
-		guild_id = nil
+		message = GT_CHAT_ALL_PAYED
+	end
+	self:Print(message)
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:PrintTransaction(income, tax)
+	self:Printf(GT_CHAT_TRANSACTION, GetCoinTextureString(income), GetCoinTextureString(tax))
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:PrintPayingTaxes(value)
+	self:Printf(GT_CHAT_PAYING_TAX, GetCoinTextureString(value))
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:PrintNothingToPay()
+	self:Print(GT_CHAT_NOTHING_TO_PAY)
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:UpdateGuildInfo()
+	if IsInGuild() then
+		if not self.guildId then
+			self.guildName, self.guildRealm = GetGuildInfo("player"), GetRealmName()
+			if self.guildName and self.guildRealm then
+				self.guildId = format("%s-%s", self.guildName, self.guildRealm):lower()
+			end
+		end
+		if self.guildId then
+			if not self.db.char[self.guildId] then
+				self.db.char[self.guildId] = {
+					amount = 0;
+				}
+			end
+			self:PrintGeneralInfo()
+		end
+	else
+		self.guildId = nil
 	end
 end
 
+--------------------------------------------------------------------------------
+function GuildTaxes:UpdatePlayerMoney(value)
+	if not value then
+		value = GetMoney()
+	end
+	self.playerMoney = value
+end
 
-------------------------
+--------------------------------------------------------------------------------
+function GuildTaxes:AccrueTaxes(income, tax)
+	self.db.char[self.guildId].amount = self.db.char[self.guildId].amount + tax
+	self:PrintTransaction(income, tax)
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:ReduceTaxes(value)
+	self.db.char[self.guildId].amount = self.db.char[self.guildId].amount - value
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:PayTaxes()
+	if not self.isBankOpened then
+		self:Print(GT_CHAT_OPEN_BANK)
+		return
+	end
+	self.isPayingTax = true
+	self:PrintPayingTaxes(self.db.char[self.guildId].amount)
+	DepositGuildBankMoney(self.db.char[self.guildId].amount)
+	self:PrintTaxes()
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:PurgeOldData()
+	-- TODO: purge old guild info, if guild chnaged
+	-- TODO: purge old history records
+	-- TODO: purge player's data that left guild
+end
+
+
+--------------------------------------------------------------------------------
 -- Slash command
-------------------------
-function GuildTaxes:OnSlashCommand(input)
-	self:Debug("Slash command: " .. input)
-
+--------------------------------------------------------------------------------
+function GuildTaxes:OnSlashCommand(input, val)
 	local cmd = {}
 	for word in input:gmatch("%S+") do
 		table.insert(cmd, word)
 	end
 
 	local idx, operation = next(cmd)
-
 	if operation == nil then
+		GuildTaxes:PrintTaxes()
 	else
 		self:Debug("Unknown command: " .. operation)
 	end
-
 end
 
 
-------------------------
+--------------------------------------------------------------------------------
 -- Communication events
-------------------------
+--------------------------------------------------------------------------------
 GuildTaxes.CommEvents = {}
 
 function GuildTaxes:OnCommReceived(prefix, message, distribution, sender)
@@ -109,43 +184,111 @@ function GuildTaxes:OnCommReceived(prefix, message, distribution, sender)
 end
 
 
-------------------------
+--------------------------------------------------------------------------------
+-- Hyperlink chat handler
+--------------------------------------------------------------------------------
+function GuildTaxes:ChatFrame_OnHyperlinkShow(chat, link, text, button)
+	local command = strsub(link, 1, 4);
+	if command == "item" then
+		local _, addonName = strsplit(":", link)
+		if addonName == "GuildTaxes" then
+			local amount = floor(self.db.char[self.guildId].amount)
+			if amount > 0 then
+				self:PayTaxes()
+			else
+				self:PrintNothingToPay()
+			end
+		end
+	end
+end
+
+
+--------------------------------------------------------------------------------
 -- WoW events handlers
-------------------------
-function GuildTaxes:PLAYER_ENTERING_WORLD()
-	self:Debug("Player entering world")
+--------------------------------------------------------------------------------
+function GuildTaxes:PLAYER_ENTERING_WORLD( ... )
+	self:UpdatePlayerMoney()
+	self:UpdateGuildInfo()
 end
 
+--------------------------------------------------------------------------------
 function GuildTaxes:PLAYER_MONEY( ... )
-	self:Debug("Player money")
+
+	local newPlayerMoney = GetMoney()
+	local delta = newPlayerMoney - self.playerMoney
+
+	self:Debug("Player money, delta=" .. tostring(delta))
+
+	if delta > 0 then
+		if not self.guildId then
+			self:Debug("Not in guild, transaction ignored")
+		elseif self.isMailOpened then
+			self:Debug("Mailbox is open, transaction ignored")
+		elseif self.isBankOpened then
+			self:Debug("Guild bank is open, transaction ignored")
+		else
+			self:AccrueTaxes(delta, delta * self.db.char.rate)
+		end
+
+	elseif self.isBankOpened and self.isPayingTax then
+		self:ReduceTaxes(-delta)
+		self.isPayingTax = false
+
+	else
+		self:Debug("Ignoring withdraw")
+	end
+
+	self:UpdatePlayerMoney(newPlayerMoney)
 end
 
+--------------------------------------------------------------------------------
 function GuildTaxes:GUILDBANKFRAME_OPENED( ... )
-	self:Debug("Guild bank opened")
+	self.isBankOpened = true
+
+	local amount = floor(self.db.char[self.guildId].amount)
+	if amount >= 1 and self.db.profile.autopay then
+		self:PayTaxes()
+	else
+		self:PrintTaxes()
+	end
+
 end
 
+--------------------------------------------------------------------------------
 function GuildTaxes:GUILDBANKFRAME_CLOSED( ... )
-	self:Debug("Guild bank closed")
+	if self.isBankOpened then
+		self.isBankOpened = false
+		self.isPayingTax = false
+	end
 end
 
+--------------------------------------------------------------------------------
 function GuildTaxes:MAIL_SHOW( ... )
 	self.isMailOpened = true
 end
 
+--------------------------------------------------------------------------------
 function GuildTaxes:MAIL_CLOSED( ... )
 	self.isMailOpened = false
 end
 
-function GuildTaxes:PLAYER_GUILD_UPDATE(unit)
-	self:Debug("Player change guild")
+--------------------------------------------------------------------------------
+function GuildTaxes:PLAYER_GUILD_UPDATE(event, unit)
+	if unit == "player" then
+		self:UpdateGuildInfo()
+	end
 end
 
 
-------------------------
--- Register events
-------------------------
-GuildTaxes:RegisterChatCommand(SLASH_COMMAND, "OnSlashCommand")
+--------------------------------------------------------------------------------
+-- Register events & commands
+--------------------------------------------------------------------------------
+GuildTaxes:Hook("ChatFrame_OnHyperlinkShow", true)
+
 GuildTaxes:RegisterComm(MESSAGE_PREFIX)
+
+GuildTaxes:RegisterChatCommand(SLASH_COMMAND, "OnSlashCommand")
+
 GuildTaxes:RegisterEvent("PLAYER_ENTERING_WORLD")
 GuildTaxes:RegisterEvent("PLAYER_MONEY")
 GuildTaxes:RegisterEvent("GUILDBANKFRAME_OPENED")

@@ -11,8 +11,8 @@
 Libs\LibStub\LibStub.lua
 
 # Localization
-localization.en.lua
 localization.ru.lua
+localization.en.lua
 
 # Main module
 GuildTaxes.lua
