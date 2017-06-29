@@ -5,7 +5,7 @@
 
 -- Addon settings
 local VERSION = "0.0.1"
-local DEVELOPMENT = true
+local DEVELOPMENT = false
 local SLASH_COMMAND = "gt"
 local MESSAGE_PREFIX = "GT"
 
@@ -82,7 +82,9 @@ end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:PrintTransaction(income, tax)
-	self:Printf(GT_CHAT_TRANSACTION, GetCoinTextureString(income), GetCoinTextureString(tax))
+	if self.db.profile.logging then
+		self:Printf(GT_CHAT_TRANSACTION, GetCoinTextureString(income), GetCoinTextureString(tax))
+	end
 end
 
 --------------------------------------------------------------------------------
