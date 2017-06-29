@@ -129,17 +129,20 @@ end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:AccrueTaxes(income, tax)
+	self:Debug("Accrue taxes with " .. tax)
 	self.db.char[self.guildId].amount = self.db.char[self.guildId].amount + tax
 	self:PrintTransaction(income, tax)
 end
 
 --------------------------------------------------------------------------------
-function GuildTaxes:ReduceTaxes(value)
-	self.db.char[self.guildId].amount = self.db.char[self.guildId].amount - value
+function GuildTaxes:ReduceTaxes(tax)
+	self:Debug("Reduce taxes with " .. tax)
+	self.db.char[self.guildId].amount = self.db.char[self.guildId].amount - tax
 end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:PayTaxes()
+	self:Debug("Paying taxes")
 	if not self.isBankOpened then
 		self:Print(GT_CHAT_OPEN_BANK)
 		return
@@ -147,7 +150,6 @@ function GuildTaxes:PayTaxes()
 	self.isPayingTax = true
 	self:PrintPayingTaxes(self.db.char[self.guildId].amount)
 	DepositGuildBankMoney(self.db.char[self.guildId].amount)
-	self:PrintTaxes()
 end
 
 --------------------------------------------------------------------------------
@@ -209,6 +211,7 @@ end
 -- WoW events handlers
 --------------------------------------------------------------------------------
 function GuildTaxes:PLAYER_ENTERING_WORLD( ... )
+	self:Debug("Player entered world")
 	self:UpdatePlayerMoney()
 	self:UpdateGuildInfo()
 end
@@ -235,7 +238,7 @@ function GuildTaxes:PLAYER_MONEY( ... )
 	elseif self.isBankOpened and self.isPayingTax then
 		self:ReduceTaxes(-delta)
 		self.isPayingTax = false
-
+		self:PrintTaxes()
 	else
 		self:Debug("Ignoring withdraw")
 	end
@@ -245,6 +248,7 @@ end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:GUILDBANKFRAME_OPENED( ... )
+	self:Debug("Guild bank opened")
 	self.isBankOpened = true
 
 	local amount = floor(self.db.char[self.guildId].amount)
@@ -259,6 +263,7 @@ end
 --------------------------------------------------------------------------------
 function GuildTaxes:GUILDBANKFRAME_CLOSED( ... )
 	if self.isBankOpened then
+		self:Debug("Guild bank closed")
 		self.isBankOpened = false
 		self.isPayingTax = false
 	end
@@ -266,17 +271,22 @@ end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:MAIL_SHOW( ... )
+	self:Debug("Mailbox opened")
 	self.isMailOpened = true
 end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:MAIL_CLOSED( ... )
-	self.isMailOpened = false
+	if self.isMailOpened then
+		self:Debug("Mailbox closed")
+		self.isMailOpened = false
+	end
 end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:PLAYER_GUILD_UPDATE(event, unit)
 	if unit == "player" then
+		self:Debug("Player guild info updated")
 		self:UpdateGuildInfo()
 	end
 end
