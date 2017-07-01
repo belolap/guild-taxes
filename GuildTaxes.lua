@@ -159,7 +159,22 @@ end
 
 
 --------------------------------------------------------------------------------
--- Slash command
+-- Slash commands
+--------------------------------------------------------------------------------
+GuildTaxes.commands = {
+	[""]    = "OnPrintTaxesCommand";
+	--["gui"] = "OnGUICommand";
+}
+
+--------------------------------------------------------------------------------
+function GuildTaxes:OnPrintTaxesCommand()
+	self:PrintTaxes()
+end
+
+function GuildTaxes:OnGUICommand()
+	self.GUI:Toggle()
+end
+
 --------------------------------------------------------------------------------
 function GuildTaxes:OnSlashCommand(input, val)
 	local cmd = {}
@@ -169,7 +184,11 @@ function GuildTaxes:OnSlashCommand(input, val)
 
 	local idx, operation = next(cmd)
 	if operation == nil then
-		GuildTaxes:PrintTaxes()
+		operation = ""
+	end
+
+	if self.commands[operation] then
+		self[self.commands[operation]](self)
 	else
 		self:Debug("Unknown command: " .. operation)
 	end
