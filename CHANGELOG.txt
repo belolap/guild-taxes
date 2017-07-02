@@ -1,0 +1,6 @@
+GuildTaxes (0.0.4)
+
+  * Calculation of taxes
+  * Rate configuration
+  * Autopayment & its configuration
+  * Logging settings
