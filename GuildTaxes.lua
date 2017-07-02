@@ -67,8 +67,8 @@ end
 --------------------------------------------------------------------------------
 function GuildTaxes:PrintTaxes()
 	local message
-	if self.db.char[self.guildId].amount >= 1 then
-		message = format(GT_CHAT_TAX, GetCoinTextureString(self.db.char[self.guildId].amount))
+	if self:GetTaxes() >= 1 then
+		message = format(GT_CHAT_TAX, GetCoinTextureString(self:GetTaxes()))
 		if (self.isBankOpened and not self.db.profile.autopay) then
 			message = message .. " |Hitem:GuildTaxes:create:|h|cffff8000[" .. GT_CHAT_TAX_CLICK .. "]|r|h"
 		end
@@ -96,6 +96,16 @@ function GuildTaxes:PrintNothingToPay()
 end
 
 --------------------------------------------------------------------------------
+function GuildTaxes:GetTaxes()
+	return self.db.char[self.guildId].amount
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:GetRate()
+	return GuildTaxes.db.char.rate
+end
+
+--------------------------------------------------------------------------------
 function GuildTaxes:UpdateGuildInfo()
 	if IsInGuild() then
 		if not self.guildId then
@@ -110,7 +120,6 @@ function GuildTaxes:UpdateGuildInfo()
 					amount = 0;
 				}
 			end
-			self:PrintGeneralInfo()
 		end
 	else
 		self.guildId = nil
@@ -128,14 +137,14 @@ end
 --------------------------------------------------------------------------------
 function GuildTaxes:AccrueTaxes(income, tax)
 	self:Debug("Accrue taxes with " .. tax)
-	self.db.char[self.guildId].amount = self.db.char[self.guildId].amount + tax
+	self.db.char[self.guildId].amount = self:GetTaxes() + tax
 	self:PrintTransaction(income, tax)
 end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:ReduceTaxes(tax)
 	self:Debug("Reduce taxes with " .. tax)
-	self.db.char[self.guildId].amount = self.db.char[self.guildId].amount - tax
+	self.db.char[self.guildId].amount = self:GetTaxes() - tax
 end
 
 --------------------------------------------------------------------------------
@@ -146,8 +155,8 @@ function GuildTaxes:PayTaxes()
 		return
 	end
 	self.isPayingTax = true
-	self:PrintPayingTaxes(self.db.char[self.guildId].amount)
-	DepositGuildBankMoney(self.db.char[self.guildId].amount)
+	self:PrintPayingTaxes(self:GetTaxes())
+	DepositGuildBankMoney(self:GetTaxes())
 end
 
 --------------------------------------------------------------------------------
@@ -162,8 +171,8 @@ end
 -- Slash commands
 --------------------------------------------------------------------------------
 GuildTaxes.commands = {
-	[""]    = "OnPrintTaxesCommand";
-	--["gui"] = "OnGUICommand";
+	[""]       = "OnGUICommand";
+	["status"] = "OnPrintTaxesCommand";
 }
 
 --------------------------------------------------------------------------------
@@ -213,7 +222,7 @@ function GuildTaxes:ChatFrame_OnHyperlinkShow(chat, link, text, button)
 	if command == "item" then
 		local _, addonName = strsplit(":", link)
 		if addonName == "GuildTaxes" then
-			local amount = floor(self.db.char[self.guildId].amount)
+			local amount = floor(self:GetTaxes())
 			if amount > 0 then
 				self:PayTaxes()
 			else
@@ -227,6 +236,10 @@ end
 --------------------------------------------------------------------------------
 -- WoW events handlers
 --------------------------------------------------------------------------------
+function GuildTaxes:PLAYER_LOGIN( ... )
+	self:PrintGeneralInfo()
+end
+
 function GuildTaxes:PLAYER_ENTERING_WORLD( ... )
 	self:Debug("Player entered world")
 	self:UpdatePlayerMoney()
@@ -268,7 +281,7 @@ function GuildTaxes:GUILDBANKFRAME_OPENED( ... )
 	self:Debug("Guild bank opened")
 	self.isBankOpened = true
 
-	local amount = floor(self.db.char[self.guildId].amount)
+	local amount = floor(self:GetTaxes())
 	if amount >= 1 and self.db.profile.autopay then
 		self:PayTaxes()
 	else
@@ -318,6 +331,7 @@ GuildTaxes:RegisterComm(MESSAGE_PREFIX)
 
 GuildTaxes:RegisterChatCommand(SLASH_COMMAND, "OnSlashCommand")
 
+GuildTaxes:RegisterEvent("PLAYER_LOGIN")
 GuildTaxes:RegisterEvent("PLAYER_ENTERING_WORLD")
 GuildTaxes:RegisterEvent("PLAYER_MONEY")
 GuildTaxes:RegisterEvent("GUILDBANKFRAME_OPENED")

@@ -14,6 +14,11 @@ GT_CONFIG_VERBOSE_LOG_DESC   = "Will print information received from guildmates"
 GT_CONFIG_DEBUG_LOG          = "Debug"
 GT_CONFIG_DEBUG_LOG_DESC     = "Print debug information (for developers)"
 
+GT_GUI_TITLE                 = "Guild Taxes"
+GT_GUI_ALL_PAYED             = "All payed"
+GT_GUI_TAX                   = "Tax %s"
+GT_GUI_GENERAL_INFO          = ", pay |cffffff00%i%%|r to |cffffff00%s|r"
+
 GT_CHAT_PREFIX               = "GuildTaxes"
 GT_CHAT_GENERAL_INFO         = "Pay |cffffff00%i%%|r of taxes to |cffffff00%s|r@|cffffff00%s|r"
 GT_CHAT_TAX                  = "To pay: %s"

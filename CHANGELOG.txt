@@ -1,3 +1,6 @@
+GuildTaxes (0.0.5)
+  * Main GUI window with current payment status
+
 GuildTaxes (0.0.4)
 
   * Calculation of taxes
