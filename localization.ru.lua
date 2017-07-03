@@ -18,6 +18,7 @@ GT_GUI_TITLE                 = "Налоги гильдии"
 GT_GUI_ALL_PAYED             = "Всё оплачено"
 GT_GUI_TAX                   = "Начислено %s"
 GT_GUI_GENERAL_INFO          = ", платим |cffffff00%i%%|r в гильдию |cffffff00%s|r"
+GT_GUI_ONLINE_ONLY           = "Только онлайн"
 
 GT_CHAT_PREFIX               = "Налоги"
 GT_CHAT_GENERAL_INFO         = "Платим |cffffff00%i%%|r налогов в гильдию |cffffff00%s|r@|cffffff00%s|r"

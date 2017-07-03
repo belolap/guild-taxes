@@ -3,31 +3,112 @@
 -- Author: Неогик@Галакронд
 --
 
-local _G = _G
-
 local AceGUI = LibStub("AceGUI-3.0")
 
-local GUI = {}
+local GUI = {
+	frame = nil,
+	header = nil,
+	tableGroup = nil,
+	tableScroll = nil,
+	filterGroup = nil,
+	onlineCheckBox = nil,
+}
 GuildTaxes.GUI = GUI
 
--- Create layout
-GUI.mainFrame = AceGUI:Create("Frame")
-GUI.mainFrame:Hide()
+--------------------------------------------------------------------------------
+function GUI:Create()
+	if self.frame ~= nil then
+		return
+	end
 
-GUI.mainFrame:SetTitle(GT_GUI_TITLE)
-GUI.mainFrame:SetLayout("Flow")
+	-- Main frame
+	self.frame = AceGUI:Create("Frame")
+	self.frame:SetTitle(GT_GUI_TITLE)
+	self.frame:SetLayout("List")
+	self.frame.frame:SetScript("OnSizeChanged", GUI.SetTableHeight)
+
+	-- Header
+	self.header = AceGUI:Create("GuildTaxesTableRow")
+	self.frame:AddChild(self.header)
+
+	-- Table with data
+	self.tableGroup = AceGUI:Create("SimpleGroup")
+	self.tableGroup:SetFullWidth(true)
+	self.tableGroup:SetLayout("Fill")
+	self.frame:AddChild(self.tableGroup)
+
+	self.tableScroll = AceGUI:Create("ScrollFrame")
+	self.tableScroll:SetLayout("List")
+	self.tableGroup:AddChild(self.tableScroll)
+
+	-- Filter group
+	self.filterGroup = AceGUI:Create("SimpleGroup")
+	self.filterGroup:SetLayout("Flow")
+	self.frame:AddChild(self.filterGroup)
+
+	-- Online checkbox
+	self.onlineCheckBox = AceGUI:Create("CheckBox")
+	self.onlineCheckBox:SetLabel(GT_GUI_ONLINE_ONLY)
+	self.filterGroup:AddChild(self.onlineCheckBox)
+	self.onlineCheckBox:SetCallback("OnValueChanged", self.OnOnlineCheckBoxClicked)
+
+	-- Adjust table height
+	GUI:SetTableHeight()
+
+	-- OnClose event
+	self.frame:SetCallback("OnClose", GUI.Destroy)
+
+	-- Fill data
+	self:SetOnlineCheckBox()
+	self:SetPayedStatus()
+	self:RefreshTable()
+end
 
 --------------------------------------------------------------------------------
-function GUI:Toggle()
-	if self.mainFrame:IsShown() then
-		self.mainFrame:Hide()
-	else
-		self.mainFrame:Show()
+function GUI:SetTableHeight()
+	if GUI.frame ~= nil then
+		local height = GUI.frame.content.height - GUI.header.frame.height - GUI.filterGroup.frame.height - 3
+		GUI.tableGroup:SetHeight(height)
 	end
 end
 
 --------------------------------------------------------------------------------
-function GUI:UpdatePayedStatus()
+function GUI:Destroy()
+	AceGUI:Release(self)
+	GUI.frame = nil
+	GUI.heade = nil
+	GUI.tableGroup = nil
+	GUI.tableScroll = nil
+	GUI.filterGroup = nil
+	GUI.onlineCheckBox = nil
+end
+
+--------------------------------------------------------------------------------
+function GUI:Toggle()
+	if self.frame ~= nill then
+		self.frame:Hide()
+	else
+		self:Create()
+	end
+end
+
+--------------------------------------------------------------------------------
+function GUI:IsShown()
+	return self.frame ~= nill
+end
+
+--------------------------------------------------------------------------------
+function GUI:SetOnlineCheckBox()
+	self.onlineCheckBox:SetValue(GuildTaxes.db.profile.onlineOnly)
+end
+
+--------------------------------------------------------------------------------
+function GUI:OnOnlineCheckBoxClicked()
+	GuildTaxes.db.profile.onlineOnly = GUI.onlineCheckBox:GetValue()
+end
+
+--------------------------------------------------------------------------------
+function GUI:SetPayedStatus()
 	local taxes = GuildTaxes:GetTaxes()
 	local status
 	if floor(taxes) > 0 then
@@ -35,29 +116,22 @@ function GUI:UpdatePayedStatus()
 	else
 		status = GT_GUI_ALL_PAYED
 	end
-	GuildTaxes:Debug(GuildTaxes.db.char.rate)
 	status = status .. format(GT_GUI_GENERAL_INFO, GuildTaxes:GetRate() * 100, GuildTaxes.guildName)
-	self.mainFrame:SetStatusText(status)
-end
-
-
---------------------------------------------------------------------------------
--- Main frame events
---------------------------------------------------------------------------------
-function GUI.mainFrame:OnShow( ... )
-	GuildTaxes:Debug("Main frame showed")
-	GUI:UpdatePayedStatus()
+	self.frame:SetStatusText(status)
 end
 
 --------------------------------------------------------------------------------
-function GUI.mainFrame:OnClose( ... )
-	GuildTaxes:Debug("Main frame closed")
-	AceGUI:Release(self)
+function GUI:RefreshTable()
+	GuildTaxes:Debug("Refreshing table")
+	--[[
+	GuildTaxes:Debug("Num of members: " .. GuildTaxes.numberMembers .. "(" .. GuildTaxes.numberMembersOnline .. " online)")
+
+	for index = 1, GuildTaxes.numberMembers do
+		local fullName, rank, rankIndex, _, _, _, _, _, _, _, _, _, _, _, _, _ = GetGuildRosterInfo(index)
+
+		local memberRow = AceGUI:Create("GuildTaxesTableRow")
+		self.tableScroll:AddChild(memberRow)
+	end
+	--]]
 end
 
-
---------------------------------------------------------------------------------
--- Set callbacks
---------------------------------------------------------------------------------
-GUI.mainFrame:SetCallback("OnClose", GUI.mainFrame.OnClose)
-GUI.mainFrame:SetCallback("OnShow", GUI.mainFrame.OnShow)

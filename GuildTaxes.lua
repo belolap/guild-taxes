@@ -4,6 +4,7 @@
 --
 
 -- Addon settings
+local VERSION = "@project-version@"
 local DEVELOPMENT = false
 local SLASH_COMMAND = "gt"
 local MESSAGE_PREFIX = "GT"
@@ -45,6 +46,8 @@ function GuildTaxes:OnInitialize()
 	self.isMailOpened = false
 	self.isBankOpened = false
 	self.isPayingTax = false
+	self.numberMembers = nil
+	self.numberMembersOnline = nil
 end
 
 
@@ -160,6 +163,11 @@ function GuildTaxes:PayTaxes()
 end
 
 --------------------------------------------------------------------------------
+function GuildTaxes:UpdateGuildRoster()
+	GuildRoster()
+end
+
+--------------------------------------------------------------------------------
 function GuildTaxes:PurgeOldData()
 	-- TODO: purge old guild info, if guild chnaged
 	-- TODO: purge old history records
@@ -244,6 +252,7 @@ function GuildTaxes:PLAYER_ENTERING_WORLD( ... )
 	self:Debug("Player entered world")
 	self:UpdatePlayerMoney()
 	self:UpdateGuildInfo()
+	self:UpdateGuildRoster()
 end
 
 --------------------------------------------------------------------------------
@@ -321,6 +330,37 @@ function GuildTaxes:PLAYER_GUILD_UPDATE(event, unit)
 	end
 end
 
+--------------------------------------------------------------------------------
+function GuildTaxes:GUILD_ROSTER_UPDATE( ... )
+	self:Debug("Guild roster updated")
+	local needRefresh = false
+	local numMembers, numOnline, _ = GetNumGuildMembers()
+	if self.numberMembers ~= numMembers then
+		if self.numberMembers ~= nil then
+			self:Debug("Number of guild members changed: " .. self.numberMembers .. " -> " .. numMembers)
+		end
+		self.numberMembers = numMembers
+		needRefresh = true
+	end
+	if self.numberMembersOnline ~= numOnline then
+		if self.numberMembersOnline ~= nil then
+			self:Debug("Number of online members changed: " .. self.numberMembersOnline .. " -> " .. numOnline)
+		end
+		self.numberMembersOnline = numOnline
+		needRefresh = true
+	end
+	if needRefresh then
+		if self.GUI:IsShown() then
+			self.GUI:RefreshTable()
+		end
+	end
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:GUILDBANK_UPDATE_MONEY(event)
+	self:Debug("Guild bank money changed")
+end
+
 
 --------------------------------------------------------------------------------
 -- Register events & commands
@@ -339,3 +379,5 @@ GuildTaxes:RegisterEvent("GUILDBANKFRAME_CLOSED")
 GuildTaxes:RegisterEvent("MAIL_SHOW")
 GuildTaxes:RegisterEvent("MAIL_CLOSED")
 GuildTaxes:RegisterEvent("PLAYER_GUILD_UPDATE")
+GuildTaxes:RegisterEvent("GUILD_ROSTER_UPDATE")
+GuildTaxes:RegisterEvent("GUILDBANK_UPDATE_MONEY")
