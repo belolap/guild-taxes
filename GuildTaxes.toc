@@ -15,7 +15,7 @@ localization.ru.lua
 localization.en.lua
 
 # GUI
-Widgets/TableRow.lua
+Widgets/MembersTable.lua
 
 # Main module
 GuildTaxes.lua

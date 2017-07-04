@@ -253,6 +253,9 @@ function GuildTaxes:PLAYER_ENTERING_WORLD( ... )
 	self:UpdatePlayerMoney()
 	self:UpdateGuildInfo()
 	self:UpdateGuildRoster()
+
+	-- Create GUI
+	self.GUI:Create()
 end
 
 --------------------------------------------------------------------------------
