@@ -109,7 +109,13 @@ function GuildTaxes:GetRate()
 end
 
 --------------------------------------------------------------------------------
+function GuildTaxes:GetGuildName()
+	return self.guildName
+end
+
+--------------------------------------------------------------------------------
 function GuildTaxes:UpdateGuildInfo()
+	self:Debug("Update guild info")
 	if IsInGuild() then
 		if not self.guildId then
 			self.guildName, self.guildRealm = GetGuildInfo("player"), GetRealmName()
@@ -123,6 +129,7 @@ function GuildTaxes:UpdateGuildInfo()
 					amount = 0;
 				}
 			end
+			self.GUI:UpdatePayedStatus()
 		end
 	else
 		self.guildId = nil
@@ -250,12 +257,13 @@ end
 
 function GuildTaxes:PLAYER_ENTERING_WORLD( ... )
 	self:Debug("Player entered world")
+	-- Create GUI
+	self.GUI:Create()
+
+	-- Update data
 	self:UpdatePlayerMoney()
 	self:UpdateGuildInfo()
 	self:UpdateGuildRoster()
-
-	-- Create GUI
-	self.GUI:Create()
 end
 
 --------------------------------------------------------------------------------

@@ -6,11 +6,9 @@
 local AceGUI = LibStub("AceGUI-3.0")
 
 local GUI = {
-	rowScale = {1, 1, 0.5, 0.5, 0.5, 0.5, 0.5},
 	frame = nil,
-	table = nil,
-	filterGroup = nil,
-	onlineCheckBox = nil,
+	status = "-",
+	data = {},
 }
 GuildTaxes.GUI = GUI
 
@@ -26,6 +24,7 @@ function GUI:Create()
 	self.frame:Hide()
 	self.frame:SetTitle(GT_GUI_TITLE)
 	self.frame:SetLayout("Static")
+	self.frame:SetStatusText(self.status)
 
 	-- Frame width
 	local width = 500
@@ -68,10 +67,8 @@ function GUI:Create()
 	self.onlineCheckBox:SetLabel(GT_GUI_ONLINE_ONLY)
 	self.onlineCheckBox:SetValue(GuildTaxes.db.profile.onlineOnly)
 	self.onlineCheckBox:SetCallback("OnValueChanged", self.OnOnlineValueChanged)
+	self.onlineCheckBox:SetValue(GuildTaxes.db.profile.onlineOnly)
 	self.filterGroup:AddChild(self.onlineCheckBox)
-
-	-- Load data
-	GUI:LoadData()
 end
 
 --------------------------------------------------------------------------------
@@ -94,48 +91,35 @@ function GUI:IsShown()
 end
 
 --------------------------------------------------------------------------------
-function GUI:LoadData()
-	self:SetOnlineCheckBox()
-	self:SetPayedStatus()
-	if GuildTaxes.numberMembers == nil then
-		GuildTaxes:UpdateGuildRoster()
-	else
-		self:RefreshTable()
-	end
-end
-
---------------------------------------------------------------------------------
-function GUI:SetOnlineCheckBox()
-	self.onlineCheckBox:SetValue(GuildTaxes.db.profile.onlineOnly)
-end
-
---------------------------------------------------------------------------------
 function GUI:OnOnlineValueChanged(event, value)
 	GuildTaxes.db.profile.onlineOnly = value
 end
 
 --------------------------------------------------------------------------------
-function GUI:SetPayedStatus()
+function GUI:UpdatePayedStatus()
 	local taxes = GuildTaxes:GetTaxes()
-	local status
+	local rate = GuildTaxes:GetRate()
+	local guild = GuildTaxes:GetGuildName()
 	if floor(taxes) > 0 then
-		status = format(GT_GUI_TAX, GetCoinTextureString(taxes))
+		self.status = format(GT_GUI_TAX, GetCoinTextureString(taxes))
 	else
-		status = GT_GUI_ALL_PAYED
+		self.status = GT_GUI_ALL_PAYED
 	end
-	status = status .. format(GT_GUI_GENERAL_INFO, GuildTaxes:GetRate() * 100, GuildTaxes.guildName)
-	self.frame:SetStatusText(status)
+	self.status = self.status .. format(GT_GUI_GENERAL_INFO, rate * 100, guild)
+	if self:IsShown() then
+		GUI.frame:SetStatusText(self.status)
+	end
 end
 
 --------------------------------------------------------------------------------
 function GUI:RefreshTable()
-	local data = {}
+	self.data = {}
 
 	for index = 1, GuildTaxes.numberMembers, 1 do
 		local r = {}
 		r.fullName, r.rank, r.rankIndex, _, _, _, _, _, r.online, _, _, _, _, _, _, _ = GetGuildRosterInfo(index)
-		data[#data + 1] = r
+		self.data[#self.data + 1] = r
 	end
 
-	self.table:SetData(data)
+	self.table:SetData(self.data)
 end
