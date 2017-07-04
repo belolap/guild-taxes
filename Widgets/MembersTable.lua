@@ -117,17 +117,41 @@ local function Constructor()
 	local num = AceGUI:GetNextWidgetNum(Type)
 	local frame = CreateFrame("Frame", ("GuildTaxesMembersTable%d"):format(num), UIParent)
 
+	local monthNames = {
+			GT_GUI_MONTH_1,
+			GT_GUI_MONTH_2,
+			GT_GUI_MONTH_3,
+			GT_GUI_MONTH_4,
+			GT_GUI_MONTH_5,
+			GT_GUI_MONTH_6,
+			GT_GUI_MONTH_7,
+			GT_GUI_MONTH_8,
+			GT_GUI_MONTH_9,
+			GT_GUI_MONTH_10,
+			GT_GUI_MONTH_11,
+			GT_GUI_MONTH_12,
+	}
+
+	months = {}
+	local _, month, _, _ = CalendarGetDate()
+	month = 2
+	for i=1, 3 do
+		months[i] = monthNames[month]
+		month = month - 1
+		if month == 0 then month = 12 end
+	end
+
 	local widget = {
 		type = Type,
 		frame = frame,
 		columns = {
-			{"name", "Имя", 1},
-			{"name", "Звание", 1},
-			{"name", "Налог", 0.5},
-			{"name", "Мес 1", 0.5},
-			{"name", "Мес 2", 0.5},
-			{"name", "Мес 3", 0.5},
-			{"name", "Всего", 0.5},
+			{"name", GT_GUI_COL_NAME, 1},
+			{"name", GT_GUI_COL_RANK, 1},
+			{"name", GT_GUI_COL_TAX, 0.5},
+			{"name", months[1], 0.5},
+			{"name", months[2], 0.5},
+			{"name", months[3], 0.5},
+			{"name", GT_GUI_COL_TOTAL, 0.5},
 		},
 		rowHeight = 16,
 		headerHeight = 16,
