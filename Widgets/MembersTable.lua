@@ -8,12 +8,19 @@ local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 if not AceGUI or (AceGUI:GetWidgetVersion(Type) or 0) >= Version then return end
 
 local _G = _G
-local CreateFrame, UIParent = CreateFrame, UIParent
+local CreateFrame, UIParent, Ambiguate = CreateFrame, UIParent, Ambiguate
 
 
 --------------------------------------------------------------------------------
 -- Methods
 --------------------------------------------------------------------------------
+local function MoneyString(value)
+	if value then
+		return GetCoinTextureString(floor(value / 100 / 100) * 100 * 100)
+	end
+	return "-"
+end
+
 local function CreateRow(self, parent)
 	local row = CreateFrame("Frame", nil, parent)
 	row:SetHeight(self.rowHeight)
@@ -21,12 +28,9 @@ local function CreateRow(self, parent)
 	for i, r in pairs(self.columns) do
 		local col = CreateFrame("Button", nil, row)
 		col:SetHeight(self.rowHeight)
-		local text = col:CreateFontString(nil, "BACKGROUND", "GameFontHighlightSmall")
-		text:SetAllPoints()
-		--text:SetJustifyV("CENTER")
-		text:SetJustifyH("LEFT")
-		text:SetText("-")
-		col.textString = text
+		col.textString = col:CreateFontString(nil, "BACKGROUND", "GameFontHighlightSmall")
+		col.textString:SetAllPoints()
+		col.textString:SetJustifyH("LEFT")
 		row.cols[#row.cols + 1] = col
 	end
 	return row
@@ -54,6 +58,7 @@ local function Layout(self)
 	local fullWidth = self.frame:GetWidth()
 	local fullHeight = self.frame:GetHeight()
 
+	self.headerLine:Show()
 	self.headerLine:ClearAllPoints()
 	self.headerLine:SetPoint("TOPLEFT", 0, 0)
 	self.headerLine:SetPoint("TOPRIGHT", -(self.scrollWidth + self.scrollSpace), 0)
@@ -67,14 +72,14 @@ local function Layout(self)
 	self.content:SetPoint("TOPLEFT", 0, -(self.headerHeight + self.headerSpace))
 	self.content:SetPoint("BOTTOMRIGHT", -(self.scrollWidth + self.scrollSpace), 0)
 
-	local numRows = max(floor((self.frame:GetHeight() - self.headerHeight) / self.rowHeight), 0)
+	self.numRows = max(floor((self.frame:GetHeight() - self.headerHeight) / self.rowHeight), 0)
 
-	while #self.rows < numRows do
+	while #self.rows < self.numRows do
 		self.rows[#self.rows + 1] = CreateRow(self, self.content)
 	end
 
 	for i, row in pairs(self.rows) do
-		if i > numRows then
+		if i > self.numRows then
 			row:Hide()
 		else
 			row:Show()
@@ -84,6 +89,8 @@ local function Layout(self)
 			LayoutCols(self, row)
 		end
 	end
+
+	self:RefreshRows()
 end
 
 local methods = {
@@ -91,7 +98,6 @@ local methods = {
 	end,
 
 	["SetData"] = function(self, data)
-		GuildTaxes:Debug("SetData")
 		self.data = data
 		self:RefreshRows()
 	end,
@@ -105,7 +111,34 @@ local methods = {
 	end,
 
 	["RefreshRows"] = function(self)
-		GuildTaxes:Debug("Refresh rows: " .. self.rowHeight)
+		if not self.data then return end
+		FauxScrollFrame_Update(self.scroll, #self.data, self.numRows, self.rowHeight)
+		local offset = FauxScrollFrame_GetOffset(self.scroll)
+
+		for i=1, self.numRows do
+			if i > #self.data then
+				self.rows[i]:Hide()
+			else
+				self.rows[i]:Show()
+				local rowData = self.data[i + offset]
+				if not rowData then break end
+				self.rows[i].cols[1].textString:SetText(Ambiguate(rowData.fullName, "guild"))
+				self.rows[i].cols[2].textString:SetText(rowData.rank)
+				if rowData.version == nil then
+					self.rows[i].cols[3].textString:SetText("")
+					self.rows[i].cols[4].textString:SetText("")
+					self.rows[i].cols[5].textString:SetText("")
+					self.rows[i].cols[6].textString:SetText("")
+					self.rows[i].cols[7].textString:SetText("")
+				else
+					self.rows[i].cols[3].textString:SetText(MoneyString(rowData.tax))
+					self.rows[i].cols[4].textString:SetText(MoneyString(rowData.months[1]))
+					self.rows[i].cols[5].textString:SetText(MoneyString(rowData.months[2]))
+					self.rows[i].cols[6].textString:SetText(MoneyString(rowData.months[3]))
+					self.rows[i].cols[7].textString:SetText(MoneyString(rowData.total))
+				end
+			end
+		end
 	end,
 }
 
@@ -134,7 +167,6 @@ local function Constructor()
 
 	months = {}
 	local _, month, _, _ = CalendarGetDate()
-	month = 2
 	for i=1, 3 do
 		months[i] = monthNames[month]
 		month = month - 1
@@ -153,6 +185,7 @@ local function Constructor()
 			{"name", months[3], 0.5},
 			{"name", GT_GUI_COL_TOTAL, 0.5},
 		},
+		numRows = 0,
 		rowHeight = 16,
 		headerHeight = 16,
 		headerSpace = 4,
@@ -167,16 +200,15 @@ local function Constructor()
 	for i, col in pairs(widget.headerLine.cols) do
 		col.textString:SetText(widget.columns[i][2])
 	end
-	headerLine = headerLine
 
 	widget.content = CreateFrame("Frame", nil, frame)
 
-	local scroll = CreateFrame("ScrollFrame", frame:GetName() .. "ScrollFrame", frame, "FauxScrollFrameTemplate")
-	scroll:SetScript("OnVerticalScroll", function(self, offset)
+	widget.scroll = CreateFrame("ScrollFrame", frame:GetName() .. "ScrollFrame", frame, "FauxScrollFrameTemplate")
+	widget.scroll:SetScript("OnVerticalScroll", function(self, offset)
 		FauxScrollFrame_OnVerticalScroll(self, offset, widget.rowHeight, function() widget:RefreshRows() end)
 	end)
 
-	local scrollBar = _G[scroll:GetName() .. "ScrollBar"]
+	local scrollBar = _G[widget.scroll:GetName() .. "ScrollBar"]
 	scrollBar:SetWidth(widget.scrollWidth)
 	widget.scrollBar = scrollBar
 

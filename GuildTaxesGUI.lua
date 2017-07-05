@@ -97,11 +97,11 @@ end
 
 --------------------------------------------------------------------------------
 function GUI:UpdatePayedStatus()
-	local taxes = GuildTaxes:GetTaxes()
+	local tax = GuildTaxes:GetTax()
 	local rate = GuildTaxes:GetRate()
 	local guild = GuildTaxes:GetGuildName()
-	if floor(taxes) > 0 then
-		self.status = format(GT_GUI_TAX, GetCoinTextureString(taxes))
+	if floor(tax) > 0 then
+		self.status = format(GT_GUI_TAX, GetCoinTextureString(tax))
 	else
 		self.status = GT_GUI_ALL_PAYED
 	end
@@ -115,9 +115,38 @@ end
 function GUI:RefreshTable()
 	self.data = {}
 
+	local statusDB = GuildTaxes:GetStatusDB()
+	local historyDB = GuildTaxes:GetHistoryDB()
+
 	for index = 1, GuildTaxes.numberMembers, 1 do
 		local r = {}
 		r.fullName, r.rank, r.rankIndex, _, _, _, _, _, r.online, _, _, _, _, _, _, _ = GetGuildRosterInfo(index)
+
+		local shortName = Ambiguate(r.fullName, "guild")
+
+		local userStatus = statusDB[shortName]
+		if userStatus ~= nil then
+			r.timestamp = userStatus.timestamp
+			r.version = userStatus.version
+			r.tax = userStatus.tax
+			r.rate = userStatus.rate
+		end
+
+		r.months = {}
+		local userHistory = historyDB[shortName]
+		if userHistory ~= nil then
+			local _, month, _, year = CalendarGetDate()
+			for i=1, 3 do
+				r.months[i] = userHistory[GuildTaxes:HistoryKey(year, month)]
+				month = month - 1
+				if month == 0 then
+					month = 12
+					year = year - 1
+				end
+			end
+			r.total = userHistory.total
+		end
+
 		self.data[#self.data + 1] = r
 	end
 
