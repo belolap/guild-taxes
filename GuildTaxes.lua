@@ -201,11 +201,15 @@ function GuildTaxes:MigrateDatabase()
 
 	-- Migrate history & status database
 	if self.db.char[self.guildId].status ~= nil then
-		self.db.realm[self.guildId].status = self.db.char[self.guildId].status
+		for i, v in ipairs(self.db.char[self.guildId].status) do
+			self.db.realm[self.guildId].status[k] = v
+		end
 		self.db.char[self.guildId].status = nil
 	end
 	if self.db.char[self.guildId].history ~= nil then
-		self.db.realm[self.guildId].history = self.db.char[self.guildId].history
+		for i, v in ipairs(self.db.char[self.guildId].history) do
+			self.db.realm[self.guildId].history[k] = v
+		end
 		self.db.char[self.guildId].history = nil
 	end
 end
