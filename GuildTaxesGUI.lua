@@ -53,6 +53,7 @@ function GUI:Create()
 	self.table = AceGUI:Create("GuildTaxesMembersTable")
 	self.table:SetPoint("TOPLEFT", self.frame.content)
 	self.table:SetPoint("BOTTOMRIGHT", self.frame.content, "BOTTOMRIGHT", 0, 50)
+	self.table:SetOnlineOnly(GuildTaxes.db.profile.onlineOnly)
 	self.frame:AddChild(self.table)
 
 	-- Filter group
@@ -93,6 +94,7 @@ end
 --------------------------------------------------------------------------------
 function GUI:OnOnlineValueChanged(event, value)
 	GuildTaxes.db.profile.onlineOnly = value
+	GUI.table:SetOnlineOnly(value)
 end
 
 --------------------------------------------------------------------------------

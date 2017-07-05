@@ -54,6 +54,19 @@ local function LayoutCols(self, row)
 	end
 end
 
+local function PrepareData(self)
+	local prepared = {}
+	local onlineOnly = self.onlineOnly
+
+	for i, v in ipairs(self.data) do
+		if not onlineOnly or v.online then
+			prepared[#prepared + 1] = v
+		end
+	end
+
+	return prepared
+end
+
 local function Layout(self)
 	local fullWidth = self.frame:GetWidth()
 	local fullHeight = self.frame:GetHeight()
@@ -102,6 +115,11 @@ local methods = {
 		self:RefreshRows()
 	end,
 
+	["SetOnlineOnly"] = function(self, onlineOnly)
+		self.onlineOnly = onlineOnly
+		self:RefreshRows()
+	end,
+
 	["OnWidthSet"] = function(self, width)
 		Layout(self)
 	end,
@@ -112,15 +130,18 @@ local methods = {
 
 	["RefreshRows"] = function(self)
 		if not self.data then return end
-		FauxScrollFrame_Update(self.scroll, #self.data, self.numRows, self.rowHeight)
+
+		local data = PrepareData(self)
+
+		FauxScrollFrame_Update(self.scroll, #data, self.numRows, self.rowHeight)
 		local offset = FauxScrollFrame_GetOffset(self.scroll)
 
 		for i=1, self.numRows do
-			if i > #self.data then
+			if i > #data then
 				self.rows[i]:Hide()
 			else
 				self.rows[i]:Show()
-				local rowData = self.data[i + offset]
+				local rowData = data[i + offset]
 				if not rowData then break end
 				self.rows[i].cols[1].textString:SetText(Ambiguate(rowData.fullName, "guild"))
 				self.rows[i].cols[2].textString:SetText(rowData.rank)
@@ -194,6 +215,7 @@ local function Constructor()
 		thumbHeight = 50,
 		rows = {},
 		data = {},
+		onlineOnly = true
 	}
 
 	widget.headerLine = CreateRow(widget, frame)
