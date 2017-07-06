@@ -158,7 +158,7 @@ end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:GetHistoryDB()
-	return self:GetGuildDB().status
+	return self:GetGuildDB().history
 end
 
 --------------------------------------------------------------------------------
@@ -267,8 +267,22 @@ function GuildTaxes:PayTax()
 end
 
 --------------------------------------------------------------------------------
-function GuildTaxes:UpdateHistoryRecord()
-	--Ambiguate
+function GuildTaxes:WritePaymentToHistory(tax)
+	local _, month, _, year = CalendarGetDate()
+	local key = self:HistoryKey(year, month)
+	local historyDB = self:GetHistoryDB()
+	local player = Ambiguate(UnitFullName("player"), "guild")
+	if historyDB[player] == nil then
+		historyDB[player] = {}
+	end
+	if historyDB[player][key] == nil then
+		historyDB[player][key] = 0
+	end
+	if historyDB[player]["total"] == nil then
+		historyDB[player]["total"] = 0
+	end
+	historyDB[player][key] = historyDB[player][key] + tax
+	historyDB[player]["total"] = historyDB[player]["total"] + tax
 end
 
 --------------------------------------------------------------------------------
@@ -465,6 +479,7 @@ function GuildTaxes:PLAYER_MONEY( ... )
 		self:ReduceTax(-delta)
 		self.isPayingTax = false
 		self:PrintTax()
+		self:WritePaymentToHistory(-delta)
 		self:NotifyStatus()
 	else
 		self:Debug("Ignoring withdraw")
