@@ -30,7 +30,7 @@ local function CreateRow(self, parent)
 		col:SetHeight(self.rowHeight)
 		col.textString = col:CreateFontString(nil, "BACKGROUND", "GameFontHighlightSmall")
 		col.textString:SetAllPoints()
-		col.textString:SetJustifyH("LEFT")
+		col.textString:SetJustifyH(r[3])
 		row.cols[#row.cols + 1] = col
 	end
 	return row
@@ -42,11 +42,11 @@ local function LayoutCols(self, row)
 
 	local total = 0
 	for i=1, #row.cols, 1 do
-		total = total + self.columns[i][3]
+		total = total + self.columns[i][4]
 	end
 	local left = 0
 	for i, col in pairs(row.cols) do
-		local width = (self.columns[i][3] / total) * width
+		local width = (self.columns[i][4] / total) * width
 		col:SetWidth(width)
 		col:SetHeight(height)
 		col:SetPoint("TOPLEFT", left, 0)
@@ -198,13 +198,13 @@ local function Constructor()
 		type = Type,
 		frame = frame,
 		columns = {
-			{"name", GT_GUI_COL_NAME, 1},
-			{"name", GT_GUI_COL_RANK, 1},
-			{"name", GT_GUI_COL_TAX, 0.5},
-			{"name", months[1], 0.5},
-			{"name", months[2], 0.5},
-			{"name", months[3], 0.5},
-			{"name", GT_GUI_COL_TOTAL, 0.5},
+			{"name", GT_GUI_COL_NAME, "LEFT", 1},
+			{"name", GT_GUI_COL_RANK, "LEFT", 1},
+			{"name", GT_GUI_COL_TAX, "RIGHT", 0.5},
+			{"name", months[1], "RIGHT", 0.5},
+			{"name", months[2], "RIGHT", 0.5},
+			{"name", months[3], "RIGHT", 0.5},
+			{"name", GT_GUI_COL_TOTAL, "RIGHT", 0.5},
 		},
 		numRows = 0,
 		rowHeight = 16,
