@@ -16,7 +16,7 @@ local CreateFrame, UIParent, Ambiguate = CreateFrame, UIParent, Ambiguate
 --------------------------------------------------------------------------------
 local function MoneyString(value)
 	if value then
-		return GetCoinTextureString(floor(value / 100 / 100) * 100 * 100)
+		return GuildTaxes:FormatMoney(floor(value / 100 / 100) * 100 * 100)
 	end
 	return "-"
 end

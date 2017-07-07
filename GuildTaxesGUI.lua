@@ -104,7 +104,7 @@ function GUI:UpdatePayedStatus()
 	local tax = GuildTaxes:GetTax()
 	local rate = GuildTaxes:GetRate()
 	if floor(tax) > 0 then
-		self.status = format(GT_GUI_TAX, GetCoinTextureString(tax))
+		self.status = format(GT_GUI_TAX, GuildTaxes:FormatMoney(tax))
 	else
 		self.status = GT_GUI_ALL_PAYED
 	end

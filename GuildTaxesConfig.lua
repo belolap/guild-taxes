@@ -38,6 +38,16 @@ GuildTaxesConfig.AceConfig = {
 			width = "full";
 			order = 102;
 		};
+		direct = {
+			type = "toggle";
+			name = GT_CONFIG_TAXES_DIRECT;
+			desc = GT_CONFIG_TAXES_DIRECT_DESC;
+			descStyle = "inline";
+			set = function(info, val) GuildTaxes.db.profile.direct = val end;
+			get = function(info) return GuildTaxes.db.profile.direct end;
+			width = "full";
+			order = 102;
+		};
 		loggingGroup = {
 			type = "header";
 			name = GT_CONFIG_LOGGING_TITLE;

@@ -20,6 +20,7 @@ local DEFAULTS = {
 		verbose = false,
 		logging = true,
 		autopay = true,
+		direct = true,
 	},
 	char = {
 		rate = 0.10,
@@ -94,6 +95,15 @@ function GuildTaxes:Debug(message, n)
 end
 
 --------------------------------------------------------------------------------
+function GuildTaxes:FormatMoney(amount)
+	if amount < 0 then
+		return "-" .. GetCoinTextureString(-amount)
+	else
+		return GetCoinTextureString(amount)
+	end
+end
+
+--------------------------------------------------------------------------------
 function GuildTaxes:PrintGeneralInfo()
 	self:Printf(GT_CHAT_GENERAL_INFO, 100 * self.db.char.rate, self.guildName, self.guildRealm)
 end
@@ -102,7 +112,7 @@ end
 function GuildTaxes:PrintTax()
 	local message
 	if self:GetTax() >= 1 then
-		message = format(GT_CHAT_TAX, GetCoinTextureString(self:GetTax()))
+		message = format(GT_CHAT_TAX, self:FormatMoney(self:GetTax()))
 		if (self.isBankOpened and not self.db.profile.autopay) then
 			message = message .. " |Hitem:GuildTaxes:create:|h|cffff8000[" .. GT_CHAT_TAX_CLICK .. "]|r|h"
 		end
@@ -115,13 +125,13 @@ end
 --------------------------------------------------------------------------------
 function GuildTaxes:PrintTransaction(income, tax)
 	if self.db.profile.logging then
-		self:Printf(GT_CHAT_TRANSACTION, GetCoinTextureString(income), GetCoinTextureString(tax))
+		self:Printf(GT_CHAT_TRANSACTION, self:FormatMoney(income), self:FormatMoney(tax))
 	end
 end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:PrintPayingTax(tax)
-	self:Printf(GT_CHAT_PAYING_TAX, GetCoinTextureString(tax))
+	self:Printf(GT_CHAT_PAYING_TAX, self:FormatMoney(tax))
 end
 
 --------------------------------------------------------------------------------
@@ -275,17 +285,18 @@ function GuildTaxes:MigrateDatabase()
 		end
 		self.db.char[self.guildId].history = nil
 	end
+
+	-- Add direct pay settins
+	if self.db.profile.direct == nil then
+		self.db.profile.direct = true
+	end
 end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:UpdatePlayerName()
-	self:Debug("Update player name")
 	self.playerName = UnitName("player")
-	self:Debug("... name: " .. self.playerName)
 	self.playerRealm = GetRealmName()
-	self:Debug("... realm: " .. self.playerRealm)
 	self.playerFullName = self.playerName .. "-" .. self.playerRealm
-	self:Debug("... full name: " .. self.playerFullName)
 end
 
 --------------------------------------------------------------------------------
@@ -300,24 +311,17 @@ end
 function GuildTaxes:UpdateGuildInfo()
 	self:Debug("Update guild info")
 	if IsInGuild() then
-		self:Debug("... in guild")
 		if not self.guildId then
 			self.guildName, self.guildRealm = GetGuildInfo("player"), GetRealmName()
 			if self.guildName and self.guildRealm then
-				self:Debug("... name and realm is set")
 				self.guildId = format("%s - %s", self.guildName, self.guildRealm)
-			else
-				self:Debug("... name and realm is not set")
 			end
 		end
 		if self.guildId then
-			self:Debug("... will migrate")
 			self:MigrateDatabase()
-			self:Debug("... update status")
 			self.GUI:UpdatePayedStatus()
 		end
 	else
-		self:Debug("... not in guild")
 		self.guildId = nil
 	end
 end
@@ -325,8 +329,7 @@ end
 --------------------------------------------------------------------------------
 function GuildTaxes:Ready()
 	if not self.isReady then
-		if self.guildId and self.numberMembers then
-			self:Debug("Ready!")
+		if self.guildId and self.numberMembers ~= nil and self.numberMembers ~= 0 then
 			self.isReady = true
 			self:PrintGeneralInfo()
 		else
@@ -497,7 +500,6 @@ GuildTaxes.events = {
 		local playerDB = statusDB[player]
 
 		if playerDB.timestamp == nil or playerDB.timestamp < timestamp then
-			GuildTaxes:Debug("Updating status for " .. player)
 			playerDB.timestamp = timestamp
 			playerDB.version = version
 			playerDB.rate = rate
@@ -517,7 +519,6 @@ GuildTaxes.events = {
 				historyDB[player][key] = val
 			end
 
-			GuildTaxes:Debug("Total " .. tostring(select(-1, ...)))
 			local total = tonumber(select(-1, ...), 10)
 			if total == nil then
 				total = 0
@@ -538,7 +539,6 @@ function GuildTaxes:OnCommReceived(prefix, message, channel, sender)
 			return
 		end
 		local data = {}
-		GuildTaxes:Debug(message)
 		for word in string.gmatch(message, "[^\t]+") do
 			data[#data + 1] = word
 		end
@@ -642,6 +642,9 @@ function GuildTaxes:GUILDBANKFRAME_OPENED( ... )
 			self:PayTax()
 		else
 			self:PrintTax()
+		end
+		if self.db.profile.direct then
+			self.isPayingTax = true
 		end
 	else
 		self:PrintNotReady()
