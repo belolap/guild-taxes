@@ -159,24 +159,30 @@ end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:GetStatusDB()
-	return self:GetGuildDB().status
+	local guildDB = self:GetGuildDB()
+	if guildDB.status == nil then
+		guildDB.status = {}
+	end
+	return guildDB.status
 end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:GetHistoryDB()
-	return self:GetGuildDB().history
+	local guildDB = self:GetGuildDB()
+	if guildDB.history == nil then
+		guildDB.history = {}
+	end
+	return guildDB.history
 end
 
 --------------------------------------------------------------------------------
-function GuildTaxes:GetStatus(playerFullName)
+function GuildTaxes:GetStatus(playerName)
 	local statusDB = self:GetStatusDB()
 	local historyDB = self:GetHistoryDB()
 
-	local version, timestamp, playerName, rate, tax
+	local version, timestamp, rate, tax
 
-	playerName = Ambiguate(playerFullName, "gulid")
-
-	if playerFullName == GuildTaxes.playerFullName then
+	if playerName == GuildTaxes.playerName then
 		version = GetAddOnMetadata("GuildTaxes", "Version")
 		timestamp = time()
 		rate = GuildTaxes:GetRate()
@@ -193,7 +199,7 @@ function GuildTaxes:GetStatus(playerFullName)
 		tax = userStatus.tax
 	end
 
-	local status = {"T", version, timestamp, playerFullName, rate, tax}
+	local status = {"T", version, timestamp, playerName, rate, tax}
 
 	local userHistory = historyDB[playerName]
 	if not userHistory then
@@ -273,10 +279,13 @@ end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:UpdatePlayerName()
+	self:Debug("Update player name")
 	self.playerName = UnitName("player")
+	self:Debug("... name: " .. self.playerName)
 	self.playerRealm = GetRealmName()
-	self.playerFullName = self.playerName .. " - " .. self.playerRealm
-	self:Debug("Full: " .. self.playerFullName)
+	self:Debug("... realm: " .. self.playerRealm)
+	self.playerFullName = self.playerName .. "-" .. self.playerRealm
+	self:Debug("... full name: " .. self.playerFullName)
 end
 
 --------------------------------------------------------------------------------
@@ -315,7 +324,6 @@ end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:Ready()
-	self:Debug("Ready")
 	if not self.isReady then
 		if self.guildId and self.numberMembers then
 			self:Debug("Ready!")
@@ -360,7 +368,7 @@ function GuildTaxes:WritePaymentToHistory(tax)
 	local _, month, _, year = CalendarGetDate()
 	local key = self:HistoryKey(year, month)
 	local historyDB = self:GetHistoryDB()
-	local player = Ambiguate(UnitFullName("player"), "guild")
+	local player = self.playerName
 	if historyDB[player] == nil then
 		historyDB[player] = {}
 	end
@@ -380,9 +388,9 @@ function GuildTaxes:SendMessage(data)
 end
 
 --------------------------------------------------------------------------------
-function GuildTaxes:NotifyStatus(playerFullName)
-	self:Debug("Notify status for " .. playerFullName)
-	self:SendMessage(self:GetStatus(playerFullName))
+function GuildTaxes:NotifyStatus(playerName)
+	self:Debug("Notify status for " .. playerName)
+	self:SendMessage(self:GetStatus(playerName))
 end
 
 --------------------------------------------------------------------------------
@@ -455,8 +463,8 @@ GuildTaxes.events = {
 
 	-- Sync command
 	["S"] = function (sender, ...)
-		GuildTaxes:Debug("Sync command received")
-		GuildTaxes:NotifyStatus(GuildTaxes.playerFullName)
+		GuildTaxes:Debug("Sync command received : " .. GuildTaxes.playerName)
+		GuildTaxes:NotifyStatus(GuildTaxes.playerName)
 	end,
 
 	-- Player's status
@@ -468,8 +476,6 @@ GuildTaxes.events = {
 			GuildTaxes:Debug("Incorrect message received")
 			return
 		end
-
-		local name = Ambiguate(player, "guild")
 
 		rate = tonumber(rate)
 		if rate == nil then
@@ -484,11 +490,11 @@ GuildTaxes.events = {
 		end
 
 		local statusDB = GuildTaxes:GetStatusDB()
-		if statusDB[name] == nil then
-			statusDB[name] = {}
+		if statusDB[player] == nil then
+			statusDB[player] = {}
 		end
 
-		local playerDB = statusDB[name]
+		local playerDB = statusDB[player]
 
 		if playerDB.timestamp == nil or playerDB.timestamp < timestamp then
 			GuildTaxes:Debug("Updating status for " .. player)
@@ -498,37 +504,30 @@ GuildTaxes.events = {
 			playerDB.tax = tax
 
 			local historyDB = GuildTaxes:GetHistoryDB()
-			if historyDB[name] == nil then
-				historyDB[name] = {}
+			if historyDB[player] == nil then
+				historyDB[player] = {}
 			end
 
-			if not ... then
-				return
-			end
 			for i=1, #... - 1, 2 do
 				local key = select(i, ...)
-				local v = select(i+1, ...)
-				GuildTaxes:Debug("v is " .. tostring(v))
 				local val = tonumber(select(i+1, ...), 10)
 				if val == nil then
 					val = 0
 				end
-				historyDB[name][key] = val
+				historyDB[player][key] = val
 			end
 
-			local total = tonumber(select(-1, ...))
+			GuildTaxes:Debug("Total " .. tostring(select(-1, ...)))
+			local total = tonumber(select(-1, ...), 10)
 			if total == nil then
 				total = 0
 			end
-			historyDB[name]["total"] = total
+			historyDB[player]["total"] = total
 
 			if GuildTaxes.GUI.IsShown() then
 				GuildTaxes.GUI:RefreshTable()
 			end
 		end
-
-		GuildTaxes:Debug(" ... total = " .. tostring(total))
-
 	end,
 }
 
@@ -615,7 +614,7 @@ function GuildTaxes:PLAYER_MONEY( ... )
 			self:Debug("Guild bank is open, transaction ignored")
 		else
 			self:AccrueTax(delta, delta * self.db.char.rate)
-			self:NotifyStatus(self.playerFullName)
+			self:NotifyStatus(self.playerName)
 		end
 
 	elseif self.isBankOpened and self.isPayingTax then
@@ -623,7 +622,7 @@ function GuildTaxes:PLAYER_MONEY( ... )
 		self.isPayingTax = false
 		self:PrintTax()
 		self:WritePaymentToHistory(-delta)
-		self:NotifyStatus(self.playerFullName)
+		self:NotifyStatus(self.playerName)
 
 	else
 		self:Debug("Ignoring withdraw")
