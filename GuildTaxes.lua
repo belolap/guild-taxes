@@ -686,7 +686,6 @@ end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:GUILD_ROSTER_UPDATE( ... )
-	self:Debug("Guild roster updated")
 	local needRefresh = false
 	local numMembers, numOnline, _ = GetNumGuildMembers()
 	if self.numberMembers ~= numMembers then
