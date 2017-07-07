@@ -25,6 +25,7 @@ function GUI:Create()
 	self.frame:SetTitle(GT_GUI_TITLE)
 	self.frame:SetLayout("Static")
 	self.frame:SetStatusText(self.status)
+	--self.frame.frame:SetScript("PLAYER_LOGIN", )
 
 	-- Frame width
 	local width = 500
@@ -99,9 +100,9 @@ end
 
 --------------------------------------------------------------------------------
 function GUI:UpdatePayedStatus()
+	local guild = GuildTaxes.guildName
 	local tax = GuildTaxes:GetTax()
 	local rate = GuildTaxes:GetRate()
-	local guild = GuildTaxes:GetGuildName()
 	if floor(tax) > 0 then
 		self.status = format(GT_GUI_TAX, GetCoinTextureString(tax))
 	else
