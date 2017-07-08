@@ -1,3 +1,6 @@
+GuildTaxes (0.1.0)
+  * Synchronization between guild members
+
 GuildTaxes (0.0.5)
   * Main GUI window with current payment status
 
