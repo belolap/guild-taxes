@@ -121,7 +121,7 @@ function GUI:RefreshTable()
 	local statusDB = GuildTaxes:GetStatusDB()
 	local historyDB = GuildTaxes:GetHistoryDB()
 
-	for index = 1, GuildTaxes.numberMembers, 1 do
+	for index = 1, GuildTaxes.numberMembers do
 		local r = {}
 		r.fullName, r.rank, r.rankIndex, _, _, _, _, _, r.online, _, _, _, _, _, _, _ = GetGuildRosterInfo(index)
 

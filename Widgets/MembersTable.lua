@@ -152,7 +152,8 @@ local methods = {
 					self.rows[i].cols[6].textString:SetText("")
 					self.rows[i].cols[7].textString:SetText("")
 				else
-					self.rows[i].cols[3].textString:SetText(MoneyString(rowData.tax))
+					local tax = MoneyString(rowData.tax) .. " (" .. rowData.rate * 100 .. "%)"
+					self.rows[i].cols[3].textString:SetText(tax)
 					self.rows[i].cols[4].textString:SetText(MoneyString(rowData.months[1]))
 					self.rows[i].cols[5].textString:SetText(MoneyString(rowData.months[2]))
 					self.rows[i].cols[6].textString:SetText(MoneyString(rowData.months[3]))
@@ -200,7 +201,7 @@ local function Constructor()
 		columns = {
 			{"name", GT_GUI_COL_NAME, "LEFT", 1},
 			{"name", GT_GUI_COL_RANK, "LEFT", 1},
-			{"name", GT_GUI_COL_TAX, "RIGHT", 0.5},
+			{"name", GT_GUI_COL_TAX, "RIGHT", 0.6},
 			{"name", months[1], "RIGHT", 0.5},
 			{"name", months[2], "RIGHT", 0.5},
 			{"name", months[3], "RIGHT", 0.5},

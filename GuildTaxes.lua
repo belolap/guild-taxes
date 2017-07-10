@@ -8,6 +8,9 @@ local VERSION = "@project-version@"
 local DEVELOPMENT = false
 local SLASH_COMMAND = "gt"
 local MESSAGE_PREFIX = "GT"
+local REFRESH_QUEUE_PERIOD = 1 * 60
+local REFRESH_STATUS_THRESHOLD = 3 * 60 * 60
+local QUEUE_ITERATION = 15
 
 local DEFAULTS = {
 	realm = {
@@ -57,6 +60,8 @@ function GuildTaxes:OnInitialize()
 	self.isBankOpened = false
 	self.isPayingTax = false
 	self.isReady = false
+	self.outgoingQueue = {}
+	self.nextSyncTimestamp = time()
 end
 
 
@@ -72,22 +77,6 @@ function GuildTaxes:HistoryKey(year, month)
 end
 
 --------------------------------------------------------------------------------
-function GuildTaxes:TimeStamp(year, month, day, hour, minute, second)
-	if second == nil then
-		second = 0
-	end
-	local dict = {
-		year = year,
-		month = month,
-		day = day,
-		hour = hour,
-		minute = minute,
-		second = 0
-	}
-	return time(dict)
-end
-
---------------------------------------------------------------------------------
 function GuildTaxes:Debug(message, n)
 	if (DEVELOPMENT or self.db.profile.debug) then
 		self:Print("|cff999999" .. message .. "|r")
@@ -95,7 +84,7 @@ function GuildTaxes:Debug(message, n)
 end
 
 --------------------------------------------------------------------------------
-function GuildTaxes:FormatMoney(amount)
+function GuildTaxes:FormatMoney(amount, color)
 	if amount < 0 then
 		return "-" .. GetCoinTextureString(-amount)
 	else
@@ -186,46 +175,69 @@ function GuildTaxes:GetHistoryDB()
 end
 
 --------------------------------------------------------------------------------
+function GuildTaxes:GetPlayerStatusDB(playerName, create)
+	local statusDB = self:GetStatusDB()
+	local playerStatus = statusDB[playerName]
+	if playerStatus == nil and create == true then
+		playerStatus = {}
+		statusDB[playerName] = playerStatus
+	end
+	return playerStatus
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:GetPlayerHistoryDB(playerName, create)
+	local historyDB = self:GetHistoryDB()
+	local playerHistory = historyDB[playerName]
+	if playerHistory == nil and create == true then
+		playerHistory = {}
+		historyDB[playerName] = playerHistory
+	end
+	return playerHistory
+end
+
+--------------------------------------------------------------------------------
+
 function GuildTaxes:GetStatus(playerName)
 	local statusDB = self:GetStatusDB()
 	local historyDB = self:GetHistoryDB()
 
-	local version, timestamp, rate, tax
+	local status = {}
 
 	if playerName == GuildTaxes.playerName then
-		version = GetAddOnMetadata("GuildTaxes", "Version")
-		timestamp = time()
-		rate = GuildTaxes:GetRate()
-		tax = GuildTaxes:GetTax()
+		status.version = GetAddOnMetadata("GuildTaxes", "Version")
+		status.timestamp = time()
+		status.rate = GuildTaxes:GetRate()
+		status.tax = GuildTaxes:GetTax()
+		status.updated = time()
 	else
-		local userStatus = statusDB[playerName]
-		if not userStatus then
-			userStatus = {}
-			statusDB[playerName] = userStatus
+		local playerStatus = statusDB[playerName]
+		if not playerStatus then
+			statusDB[playerName] = {}
+			return
 		end
-		version = userStatus.version
-		timestamp = userStatus.timestamp
-		rate = userStatus.rate
-		tax = userStatus.tax
+		status.version = playerStatus.version
+		status.timestamp = playerStatus.timestamp
+		status.rate = playerStatus.rate
+		status.tax = playerStatus.tax
+		status.updated = playerStatus.updated
 	end
 
-	local status = {"T", version, timestamp, playerName, rate, tax}
-
-	local userHistory = historyDB[playerName]
-	if not userHistory then
-		userHistory = {}
-		historyDB[playerName] = userHistory
+	local playerHistory = historyDB[playerName]
+	if not playerHistory then
+		playerHistory = {}
 	end
+
+	status.history= {}
 
 	local _, month, _, year = CalendarGetDate()
 	for i=1, 3 do
 		local key = GuildTaxes:HistoryKey(year, month)
-		local payed = userHistory[key]
-		if payed == nil then
-			payed = 0
+		local value = playerHistory[key]
+		if value == nil then
+			value = 0
 		end
-		status[#status + 1] = key
-		status[#status + 1] = payed
+		status.history[key] = value
 		month = month - 1
 		if month == 0 then
 			month = 12
@@ -233,11 +245,11 @@ function GuildTaxes:GetStatus(playerName)
 		end
 	end
 
-	local total = userHistory["total"]
+	local total = playerHistory["total"]
 	if total == nil then
 		total = 0
 	end
-	status[#status + 1] = total
+	status.total = total
 
 	return status
 end
@@ -309,7 +321,7 @@ end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:UpdateGuildInfo()
-	self:Debug("Update guild info")
+	self:Debug("Updating guild info")
 	if IsInGuild() then
 		if not self.guildId then
 			self.guildName, self.guildRealm = GetGuildInfo("player"), GetRealmName()
@@ -332,6 +344,7 @@ function GuildTaxes:Ready()
 		if self.guildId and self.numberMembers ~= nil and self.numberMembers ~= 0 then
 			self.isReady = true
 			self:PrintGeneralInfo()
+			self:NotifyStatus(self.playerName)
 		else
 			self.isReady = false
 		end
@@ -370,37 +383,136 @@ end
 function GuildTaxes:WritePaymentToHistory(tax)
 	local _, month, _, year = CalendarGetDate()
 	local key = self:HistoryKey(year, month)
-	local historyDB = self:GetHistoryDB()
-	local player = self.playerName
-	if historyDB[player] == nil then
-		historyDB[player] = {}
+	local playerHistory = self:GetPlayerHistoryDB(self.playerName, true)
+	if playerHistory[key] == nil then
+		playerHistory[key] = 0
 	end
-	if historyDB[player][key] == nil then
-		historyDB[player][key] = 0
+	if playerHistory["total"] == nil then
+		playerHistory["total"] = 0
 	end
-	if historyDB[player]["total"] == nil then
-		historyDB[player]["total"] = 0
-	end
-	historyDB[player][key] = historyDB[player][key] + tax
-	historyDB[player]["total"] = historyDB[player]["total"] + tax
+	playerHistory[key] = playerHistory[key] + tax
+	playerHistory["total"] = playerHistory["total"] + tax
 end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:SendMessage(data)
-	SendAddonMessage(MESSAGE_PREFIX, table.concat(data, "\t"), "GUILD")
+	local message = table.concat(data, "\t")
+	self:Debug("Send (still " .. #self.outgoingQueue .. " in queue): " .. message)
+	SendAddonMessage(MESSAGE_PREFIX, message, "GUILD")
 end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:NotifyStatus(playerName)
-	self:Debug("Notify status for " .. playerName)
-	self:SendMessage(self:GetStatus(playerName))
+	local status = self:GetStatus(playerName)
+	if status.version ~= nil then
+		self:Debug("Add status message for " .. playerName .. " to queue")
+		data = {"T", status.version, status.timestamp, playerName, status.rate, status.tax}
+		for key, value in pairs(status.history) do
+			table.insert(data, key)
+			table.insert(data, value)
+		end
+		table.insert(data, status.total)
+		table.insert(self.outgoingQueue, 1, data)
+	else
+		self:Debug("No status for " .. playerName .. ", ignoring")
+	end
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:RequestStatus(playerName, timestamp)
+	self:Debug("Add status request for " .. playerName .. " to queue")
+	if timestamp == nil then
+		timestamp = self:GetPlayerStatusDB(playerName, true).timestamp
+	end
+	local data = {"S", playerName}
+	if timestamp ~= nil then
+		table.insert(data, timestamp)
+	end
+	table.insert(self.outgoingQueue, data)
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:RemoveQueueS(playerName)
+	for i=#self.outgoingQueue, 1, -1 do
+		local data=self.outgoingQueue[i]
+		if data[1] == "S" and data[2] == playerName then
+			table.remove(data, i)
+		end
+	end
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:RemoveQueueT(playerName)
+	for i=#self.outgoingQueue, 1, -1 do
+		local data=self.outgoingQueue[i]
+		if data[1] == "T" and data[4] == playerName then
+			table.remove(data, i)
+		end
+	end
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:FillOutgoingQueue()
+	self:Debug("Filling outgoung queue")
+
+	if self.nextSyncTimestamp > time() then
+		self:Debug("... skip filling")
+		return
+	end
+
+	self:Debug("... filling")
+
+	local statusDB = GuildTaxes:GetStatusDB()
+
+	if self.numberMembers ~= nil and self.numberMembers > 0 then
+		for index = 1, self.numberMembers do
+			local playerName = GetGuildRosterInfo(index)
+			playerName = Ambiguate(playerName, "guild")
+			local playerStatus = self:GetPlayerStatusDB(playerName)
+
+			if playerStatus.updated == nil or playerStatus.updated + REFRESH_STATUS_THRESHOLD < time() then
+				self:RequestStatus(playerName, playerStatus.timestamp)
+			end
+		end
+	end
+
+	self.nextSyncTimestamp = time() + REFRESH_QUEUE_PERIOD
+end
+
+--------------------------------------------------------------------------------
+function GuildTaxes:QueueIteration()
+	if GuildTaxes.isReady and not InCombatLockdown() then
+		if #GuildTaxes.outgoingQueue > 0 then
+			local data = table.remove(GuildTaxes.outgoingQueue, 1)
+			if data[1] == "S" then
+				local playerName = data[2]
+				if playerName then
+					local playerStatus = GuildTaxes:GetPlayerStatusDB(playerName, true)
+					playerStatus.updated = time()
+				end
+			end
+			GuildTaxes:SendMessage(data)
+		else
+			GuildTaxes:PurgeOldData()
+			GuildTaxes:FillOutgoingQueue()
+		end
+	end
+	C_Timer.After(QUEUE_ITERATION, GuildTaxes.QueueIteration)
 end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:PurgeOldData()
-	-- TODO: purge old guild info, if guild chnaged
-	-- TODO: purge old history records
-	-- TODO: purge player's data that left guild
+	self:Debug("Purging old data")
+	if self.numberMembers ~= nil and self.numberMembers > 0 then
+		local statusDB = self:GetStatusDB()
+		local guildPlayers = {}
+		for index = 1, GuildTaxes.numberMembers do
+			local fullName = GetGuildRosterInfo(index)
+			table.insert(guildPlayers, Ambiguate(fullName, "guild"))
+		end
+		-- TODO: purge old history records
+		-- TODO: purge player's data that left guild
+	end
 end
 
 
@@ -466,68 +578,89 @@ GuildTaxes.events = {
 
 	-- Sync command
 	["S"] = function (sender, ...)
-		GuildTaxes:Debug("Sync command received : " .. GuildTaxes.playerName)
-		GuildTaxes:NotifyStatus(GuildTaxes.playerName)
+		local playerName = select(1, ...)
+		if playerName == nil then
+			playerName = GuildTaxes.playerName
+		end
+		local timestamp = select(2, ...)
+		if timestamp ~= nil then
+			timestamp = tonumber(timestamp)
+		end
+
+		local playerStatus = GuildTaxes:GetPlayerStatusDB(playerName, true)
+		if playerStatus.timestamp ~= nil then
+			if timestamp == nil or timestamp < playerStatus.timestamp then
+				GuildTaxes:Debug("Recieved status request for " .. playerName)
+				GuildTaxes:NotifyStatus(playerName, timestamp)
+			elseif timestamp == playerStatus.timestamp then
+				GuildTaxes:Debug("Recieved status request for " .. playerName .. ", have same, ignoring")
+			else
+				GuildTaxes:Debug("Recieved status request for " .. playerName .. ", have older, ignoring")
+			end
+		else
+			GuildTaxes:Debug("Recieved status request for " .. playerName .. ", have no status, ignoring")
+		end
+		playerStatus.updated = time()
+		GuildTaxes:RemoveQueueS(playerName)
 	end,
 
 	-- Player's status
-	["T"] = function (sender, version, timestamp, player, rate, tax, ...)
-		GuildTaxes:Debug("Receive status message for " .. tostring(player))
+	["T"] = function (sender, version, timestamp, playerName, rate, tax, ...)
+
+		-- TODO: check if recieved request newer
 
 		timestamp = tonumber(timestamp)
 		if timestamp == nil then
-			GuildTaxes:Debug("Incorrect message received")
+			GuildTaxes:Debug("Incorrect T-message received from " .. sender)
 			return
 		end
 
 		rate = tonumber(rate)
 		if rate == nil then
-			GuildTaxes:Debug("Incorrect message received")
+			GuildTaxes:Debug("Incorrect T-message received from " .. sender)
 			return
 		end
 
 		tax = tonumber(tax)
 		if tax == nil then
-			GuildTaxes:Debug("Incorrect message received")
+			GuildTaxes:Debug("Incorrect T-message received from " .. sender)
 			return
 		end
 
-		local statusDB = GuildTaxes:GetStatusDB()
-		if statusDB[player] == nil then
-			statusDB[player] = {}
-		end
+		local playerStatus = GuildTaxes:GetPlayerStatusDB(playerName, true)
+		if playerStatus.timestamp == nil or playerStatus.timestamp < timestamp then
+			GuildTaxes:Debug("Receive status message for " .. tostring(playerName) .. ", updating")
+			playerStatus.timestamp = timestamp
+			playerStatus.version = version
+			playerStatus.rate = rate
+			playerStatus.tax = tax
+			playerStatus.updated = timestamp
+			GuildTaxes:RemoveQueueS(playerName)
+			GuildTaxes:RemoveQueueT(playerName)
 
-		local playerDB = statusDB[player]
-
-		if playerDB.timestamp == nil or playerDB.timestamp < timestamp then
-			playerDB.timestamp = timestamp
-			playerDB.version = version
-			playerDB.rate = rate
-			playerDB.tax = tax
-
-			local historyDB = GuildTaxes:GetHistoryDB()
-			if historyDB[player] == nil then
-				historyDB[player] = {}
-			end
-
+			local playerHistory = GuildTaxes:GetPlayerHistoryDB(playerName, true)
 			for i=1, #... - 1, 2 do
 				local key = select(i, ...)
 				local val = tonumber(select(i+1, ...), 10)
 				if val == nil then
 					val = 0
 				end
-				historyDB[player][key] = val
+				playerHistory[key] = val
 			end
 
 			local total = tonumber(select(-1, ...), 10)
 			if total == nil then
 				total = 0
 			end
-			historyDB[player]["total"] = total
+			playerHistory["total"] = total
 
 			if GuildTaxes.GUI.IsShown() then
 				GuildTaxes.GUI:RefreshTable()
 			end
+		elseif playerStatus.timestamp == timestamp then
+			GuildTaxes:Debug("Receive status message for " .. tostring(playerName) .. ", have same, ignoring")
+		else
+			GuildTaxes:Debug("Receive status message for " .. tostring(playerName) .. ", have newer, ignoring")
 		end
 	end,
 }
@@ -592,6 +725,9 @@ function GuildTaxes:PLAYER_ENTERING_WORLD( ... )
 
 	-- Update guild roster
 	GuildRoster()
+
+	-- Start queue iteration
+	C_Timer.After(QUEUE_ITERATION, self.QueueIteration)
 end
 
 --------------------------------------------------------------------------------

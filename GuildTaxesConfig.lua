@@ -46,7 +46,7 @@ GuildTaxesConfig.AceConfig = {
 			set = function(info, val) GuildTaxes.db.profile.direct = val end;
 			get = function(info) return GuildTaxes.db.profile.direct end;
 			width = "full";
-			order = 102;
+			order = 103;
 		};
 		loggingGroup = {
 			type = "header";
@@ -83,6 +83,14 @@ GuildTaxesConfig.AceConfig = {
 			width = "full";
 			order = 203;
 		};
+		--[[help = {
+			type = "label";
+			name = "Test";
+			desc = GT_CONFIG_DEBUG_LOG_DESC;
+			descStyle = "inline";
+			width = "full";
+			order = 204;
+		};]]
 	}
 }
 
