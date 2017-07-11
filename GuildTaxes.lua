@@ -470,7 +470,7 @@ function GuildTaxes:FillOutgoingQueue()
 			playerName = Ambiguate(playerName, "guild")
 			local playerStatus = self:GetPlayerStatusDB(playerName)
 
-			if playerStatus.updated == nil or playerStatus.updated + REFRESH_STATUS_THRESHOLD < time() then
+			if playerStatus == nil or playerStatus.updated == nil or playerStatus.updated + REFRESH_STATUS_THRESHOLD < time() then
 				self:RequestStatus(playerName, playerStatus.timestamp)
 			end
 		end

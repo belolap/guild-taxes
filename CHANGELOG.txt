@@ -1,3 +1,6 @@
+GuildTaxes (0.1.2)
+  * Fix filling offline sync queue lua error
+
 GuildTaxes (0.1.1)
   * Add tax rate in stats window
   * Notify status for guild members when player login
