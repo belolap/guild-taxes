@@ -456,11 +456,8 @@ function GuildTaxes:FillOutgoingQueue()
 	self:Debug("Filling outgoung queue")
 
 	if self.nextSyncTimestamp > time() then
-		self:Debug("... skip filling")
 		return
 	end
-
-	self:Debug("... filling")
 
 	local statusDB = GuildTaxes:GetStatusDB()
 
@@ -471,7 +468,11 @@ function GuildTaxes:FillOutgoingQueue()
 			local playerStatus = self:GetPlayerStatusDB(playerName)
 
 			if playerStatus == nil or playerStatus.updated == nil or playerStatus.updated + REFRESH_STATUS_THRESHOLD < time() then
-				self:RequestStatus(playerName, playerStatus.timestamp)
+				local timestamp
+				if playerStatus ~= nil then
+					timestamp = playerStatus.timestamp
+				end
+				self:RequestStatus(playerName, timestamp)
 			end
 		end
 	end

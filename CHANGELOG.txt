@@ -1,3 +1,6 @@
+GuildTaxes (0.1.3)
+  * Fix some bugs
+
 GuildTaxes (0.1.2)
   * Fix filling offline sync queue lua error
 
