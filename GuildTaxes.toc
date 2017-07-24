@@ -13,6 +13,7 @@ embeds.xml
 # Localization
 localization.ru.lua
 localization.en.lua
+localization.de.lua
 
 # GUI
 Widgets/MembersTable.lua
