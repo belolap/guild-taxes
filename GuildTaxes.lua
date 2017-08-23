@@ -8,8 +8,9 @@ local VERSION = "@project-version@"
 local DEVELOPMENT = false
 local SLASH_COMMAND = "gt"
 local MESSAGE_PREFIX = "GT"
-local REFRESH_QUEUE_PERIOD = 1 * 60
-local REFRESH_STATUS_THRESHOLD = 3 * 60 * 60
+local REFRESH_ALL_PERIOD = 1 * 60
+local REFRESH_PLAYER_STATUS_PERIOD = 3 * 60 * 60
+local PURGE_DATA_PERIOD = 3 * 60
 local QUEUE_ITERATION = 15
 
 local DEFAULTS = {
@@ -62,6 +63,7 @@ function GuildTaxes:OnInitialize()
 	self.isReady = false
 	self.outgoingQueue = {}
 	self.nextSyncTimestamp = time()
+	self.nextPurgeTimestamp = time()
 end
 
 
@@ -436,7 +438,7 @@ function GuildTaxes:RemoveQueueS(playerName)
 	for i=#self.outgoingQueue, 1, -1 do
 		local data=self.outgoingQueue[i]
 		if data[1] == "S" and data[2] == playerName then
-			table.remove(data, i)
+			table.remove(self.outgoingQueue, i)
 		end
 	end
 end
@@ -446,7 +448,7 @@ function GuildTaxes:RemoveQueueT(playerName)
 	for i=#self.outgoingQueue, 1, -1 do
 		local data=self.outgoingQueue[i]
 		if data[1] == "T" and data[4] == playerName then
-			table.remove(data, i)
+			table.remove(self.outgoingQueue, i)
 		end
 	end
 end
@@ -455,10 +457,6 @@ end
 function GuildTaxes:FillOutgoingQueue()
 	self:Debug("Filling outgoung queue")
 
-	if self.nextSyncTimestamp > time() then
-		return
-	end
-
 	local statusDB = GuildTaxes:GetStatusDB()
 
 	if self.numberMembers ~= nil and self.numberMembers > 0 then
@@ -466,18 +464,15 @@ function GuildTaxes:FillOutgoingQueue()
 			local playerName = GetGuildRosterInfo(index)
 			playerName = Ambiguate(playerName, "guild")
 			local playerStatus = self:GetPlayerStatusDB(playerName)
-
-			if playerStatus == nil or playerStatus.updated == nil or playerStatus.updated + REFRESH_STATUS_THRESHOLD < time() then
-				local timestamp
-				if playerStatus ~= nil then
-					timestamp = playerStatus.timestamp
-				end
-				self:RequestStatus(playerName, timestamp)
+			if playerStatus == nil or playerStatus.updated == nil then
+				self:RequestStatus(playerName)
+			elseif playerStatus.updated + REFRESH_PLAYER_STATUS_PERIOD < time() then
+				self:RequestStatus(playerName, playerStatus.timestamp)
 			end
 		end
 	end
 
-	self.nextSyncTimestamp = time() + REFRESH_QUEUE_PERIOD
+	self.nextSyncTimestamp = time() + REFRESH_ALL_PERIOD
 end
 
 --------------------------------------------------------------------------------
@@ -494,8 +489,14 @@ function GuildTaxes:QueueIteration()
 			end
 			GuildTaxes:SendMessage(data)
 		else
-			GuildTaxes:PurgeOldData()
-			GuildTaxes:FillOutgoingQueue()
+			if GuildTaxes.nextPurgeTimestamp < time() then
+				GuildTaxes:PurgeOldData()
+			end
+			if GuildTaxes.nextSyncTimestamp < time() then
+				GuildTaxes:FillOutgoingQueue()
+			end
+
+
 		end
 	end
 	C_Timer.After(QUEUE_ITERATION, GuildTaxes.QueueIteration)
@@ -511,6 +512,7 @@ function GuildTaxes:PurgeOldData()
 			local fullName = GetGuildRosterInfo(index)
 			table.insert(guildPlayers, Ambiguate(fullName, "guild"))
 		end
+		self.nextPurgeTimestamp = time() + PURGE_DATA_PERIOD
 		-- TODO: purge old history records
 		-- TODO: purge player's data that left guild
 	end
@@ -658,8 +660,10 @@ GuildTaxes.events = {
 			if GuildTaxes.GUI.IsShown() then
 				GuildTaxes.GUI:RefreshTable()
 			end
+
 		elseif playerStatus.timestamp == timestamp then
 			GuildTaxes:Debug("Receive status message for " .. tostring(playerName) .. ", have same, ignoring")
+
 		else
 			GuildTaxes:Debug("Receive status message for " .. tostring(playerName) .. ", have newer, ignoring")
 		end
@@ -682,7 +686,7 @@ function GuildTaxes:OnCommReceived(prefix, message, channel, sender)
 			if handler then
 				handler(sender, unpack(data))
 			else
-				GuildTaxes:Debug("Unknown command received: ".. command)
+				GuildTaxes:Debug("Unknown command received from " .. sender .. ": ".. command)
 			end
 		end
 	end
