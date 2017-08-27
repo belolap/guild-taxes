@@ -146,14 +146,14 @@ function GUI:RefreshTable()
 		end
 
 		if r == nil then
-			r = {
-				["fullName"] = fullName,
-				["rank"] = rank,
-				["rankIndex"] = rankIndex,
-				["online"] = online,
-			}
+			r = {}
 			table.insert(self.data, r)
 		end
+
+		r.fullName = fullName
+		r.rank = rank
+		r.rankIndex = rankIndex
+		r.online = online
 
 		local shortName = Ambiguate(r.fullName, "guild")
 
