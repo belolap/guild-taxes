@@ -5,10 +5,15 @@
 
 local AceGUI = LibStub("AceGUI-3.0")
 
+-- Settings
+local TABLE_UPDATE_THRESHOLD = 5
+
+-- GUI
 local GUI = {
 	frame = nil,
 	status = "-",
 	data = {},
+	updated = nil,
 }
 GuildTaxes.GUI = GUI
 
@@ -25,7 +30,6 @@ function GUI:Create()
 	self.frame:SetTitle(GT_GUI_TITLE)
 	self.frame:SetLayout("Static")
 	self.frame:SetStatusText(self.status)
-	--self.frame.frame:SetScript("PLAYER_LOGIN", )
 
 	-- Frame width
 	local width = 500
@@ -116,14 +120,40 @@ end
 
 --------------------------------------------------------------------------------
 function GUI:RefreshTable()
-	self.data = {}
+	local now = time()
+
+	-- XXX: Need we disable updating while in combat?
+
+	-- Flood protection
+	if self.updated ~= nil and self.updated + TABLE_UPDATE_THRESHOLD > now then
+		return
+	end
 
 	local statusDB = GuildTaxes:GetStatusDB()
 	local historyDB = GuildTaxes:GetHistoryDB()
 
+	-- Update existing members' info
 	for index = 1, GuildTaxes.numberMembers do
-		local r = {}
-		r.fullName, r.rank, r.rankIndex, _, _, _, _, _, r.online, _, _, _, _, _, _, _ = GetGuildRosterInfo(index)
+		local fullName, rank, rankIndex, online
+		fullName, rank, rankIndex, _, _, _, _, _, online, _, _, _, _, _, _, _ = GetGuildRosterInfo(index)
+
+		local r
+		for i, row in pairs(self.data) do
+			if row.fullName == fullName then
+				r = row
+				break
+			end
+		end
+
+		if r == nil then
+			r = {
+				["fullName"] = fullName,
+				["rank"] = rank,
+				["rankIndex"] = rankIndex,
+				["online"] = online,
+			}
+			table.insert(self.data, r)
+		end
 
 		local shortName = Ambiguate(r.fullName, "guild")
 
@@ -150,8 +180,16 @@ function GUI:RefreshTable()
 			r.total = userHistory.total
 		end
 
-		self.data[#self.data + 1] = r
+		r.updated = now
 	end
 
+	-- Remove non-existing members' info
+	for i, row in pairs(self.data) do
+		if row.updated ~= now then
+			table.remove(self.data, i)
+		end
+	end
+
+	self.updated = now
 	self.table:SetData(self.data)
 end
