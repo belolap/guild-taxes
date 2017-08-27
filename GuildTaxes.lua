@@ -408,7 +408,7 @@ function GuildTaxes:NotifyStatus(playerName)
 	local status = self:GetStatus(playerName)
 	if status.version ~= nil then
 		self:Debug("Add status message for " .. playerName .. " to queue")
-		data = {"T", status.version, status.timestamp, playerName, status.rate, status.tax}
+		data = {"T", status.version, status.timestamp, playerName, status.rate, math.floor(status.tax)}
 		for key, value in pairs(status.history) do
 			table.insert(data, key)
 			table.insert(data, value)
