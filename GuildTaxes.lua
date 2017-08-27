@@ -631,7 +631,7 @@ GuildTaxes.events = {
 		end
 
 		local playerStatus = GuildTaxes:GetPlayerStatusDB(playerName, true)
-		if playerStatus.timestamp == nil or playerStatus.timestamp < timestamp then
+		if playerStatus.timestamp == nil or playerStatus.timestamp < timestamp or (sender == playerName and playerStatus.timestamp ~= timestamp) then
 			GuildTaxes:Debug("Receive status message for " .. tostring(playerName) .. ", updating")
 			playerStatus.timestamp = timestamp
 			playerStatus.version = version
