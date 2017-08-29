@@ -1,3 +1,7 @@
+GuildTaxes (0.1.5)
+  * 7.3 patch
+  * Fix some communications bugs
+
 GuildTaxes (0.1.4)
   * Added german translation
   * Fix minor bugs
