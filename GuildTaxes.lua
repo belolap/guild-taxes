@@ -591,15 +591,15 @@ GuildTaxes.events = {
 		local playerStatus = GuildTaxes:GetPlayerStatusDB(playerName, true)
 		if playerStatus.timestamp ~= nil then
 			if timestamp == nil or timestamp < playerStatus.timestamp then
-				GuildTaxes:Debug("Recieved status request for " .. playerName)
-				GuildTaxes:NotifyStatus(playerName, timestamp)
+				GuildTaxes:Debug("Recieved request for " .. playerName)
+				GuildTaxes:NotifyStatus(playerName)
 			elseif timestamp == playerStatus.timestamp then
-				GuildTaxes:Debug("Recieved status request for " .. playerName .. ", have same, ignoring")
+				GuildTaxes:Debug("Recieved request for " .. playerName .. ", have same, ignoring")
 			else
-				GuildTaxes:Debug("Recieved status request for " .. playerName .. ", have older, ignoring")
+				GuildTaxes:Debug("Recieved request for " .. playerName .. ", have older, ignoring")
 			end
 		else
-			GuildTaxes:Debug("Recieved status request for " .. playerName .. ", have no status, ignoring")
+			GuildTaxes:Debug("Recieved request for " .. playerName .. ", have no status, ignoring")
 		end
 		playerStatus.updated = time()
 		GuildTaxes:RemoveQueueS(playerName)
@@ -630,7 +630,7 @@ GuildTaxes.events = {
 
 		local playerStatus = GuildTaxes:GetPlayerStatusDB(playerName, true)
 		if playerStatus.timestamp == nil or playerStatus.timestamp < timestamp or (sender == playerName and playerStatus.timestamp ~= timestamp) then
-			GuildTaxes:Debug("Receive status message for " .. tostring(playerName) .. ", updating")
+			GuildTaxes:Debug("Receive status for " .. tostring(playerName) .. ", updating")
 			playerStatus.timestamp = timestamp
 			playerStatus.version = version
 			playerStatus.rate = rate
@@ -660,10 +660,10 @@ GuildTaxes.events = {
 			end
 
 		elseif playerStatus.timestamp == timestamp then
-			GuildTaxes:Debug("Receive status message for " .. tostring(playerName) .. ", have same, ignoring")
+			GuildTaxes:Debug("Receive status for " .. tostring(playerName) .. ", have same, ignoring")
 
 		else
-			GuildTaxes:Debug("Receive status message for " .. tostring(playerName) .. ", have newer, ignoring")
+			GuildTaxes:Debug("Receive status for " .. tostring(playerName) .. ", have newer, ignoring")
 		end
 	end,
 }
