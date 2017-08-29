@@ -397,7 +397,7 @@ function GuildTaxes:WritePaymentToHistory(tax)
 end
 
 --------------------------------------------------------------------------------
-function GuildTaxes:SendMessage(data)
+function GuildTaxes:SendData(data)
 	local message = table.concat(data, "\t")
 	self:Debug("Send (still " .. #self.outgoingQueue .. " in queue): " .. message)
 	SendAddonMessage(MESSAGE_PREFIX, message, "GUILD")
@@ -487,7 +487,7 @@ function GuildTaxes:QueueIteration()
 					playerStatus.updated = time()
 				end
 			end
-			GuildTaxes:SendMessage(data)
+			GuildTaxes:SendData(data)
 		else
 			if GuildTaxes.nextPurgeTimestamp < time() then
 				GuildTaxes:PurgeOldData()
@@ -495,8 +495,6 @@ function GuildTaxes:QueueIteration()
 			if GuildTaxes.nextSyncTimestamp < time() then
 				GuildTaxes:FillOutgoingQueue()
 			end
-
-
 		end
 	end
 	C_Timer.After(QUEUE_ITERATION, GuildTaxes.QueueIteration)
@@ -551,7 +549,7 @@ end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:OnSyncCommand()
-	self:SendMessage({"S"})
+	self:SendData({"S"})
 end
 
 --------------------------------------------------------------------------------
