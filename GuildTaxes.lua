@@ -642,11 +642,13 @@ GuildTaxes.events = {
 			local playerHistory = GuildTaxes:GetPlayerHistoryDB(playerName, true)
 			for i=1, #... - 1, 2 do
 				local key = select(i, ...)
-				local val = tonumber(select(i+1, ...), 10)
-				if val == nil then
-					val = 0
+				if key ~= nil then
+					local val = tonumber(select(i+1, ...), 10)
+					if val == nil then
+						val = 0
+					end
+					playerHistory[key] = val
 				end
-				playerHistory[key] = val
 			end
 
 			local total = tonumber(select(-1, ...), 10)
