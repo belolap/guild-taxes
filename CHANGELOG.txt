@@ -1,3 +1,7 @@
+GuildTaxes (0.1.6)
+  * Update english locale
+  * Add Brazilian portuguese translation
+
 GuildTaxes (0.1.5)
   * 7.3 patch
   * Fix some communications bugs

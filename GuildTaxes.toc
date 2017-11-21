@@ -1,6 +1,6 @@
 ## Interface: 70300
 ## Author: Неогик@Галакронд
-## Version: 0.1.5
+## Version: 0.1.6
 ## Title: |cff69ccf0Guild Taxes|r
 ## Title-ruRU: |cff69ccf0Налоги гильдии|r
 ## Notes: Keep your guild bank full
