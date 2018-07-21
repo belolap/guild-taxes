@@ -188,7 +188,7 @@ local function Constructor()
 	}
 
 	months = {}
-	local _, month, _, _ = CalendarGetDate()
+	local month = tonumber(date("%m"))
 	for i=1, 3 do
 		months[i] = monthNames[month]
 		month = month - 1

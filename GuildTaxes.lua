@@ -232,7 +232,8 @@ function GuildTaxes:GetStatus(playerName)
 
 	status.history= {}
 
-	local _, month, _, year = CalendarGetDate()
+	local month = tonumber(date("%m"))
+	local year = tonumber(date("%Y"))
 	for i=1, 3 do
 		local key = GuildTaxes:HistoryKey(year, month)
 		local value = playerHistory[key]
@@ -383,7 +384,9 @@ end
 
 --------------------------------------------------------------------------------
 function GuildTaxes:WritePaymentToHistory(tax)
-	local _, month, _, year = CalendarGetDate()
+	local month = tonumber(date("%m"))
+	local year = tonumber(date("%Y"))
+	self:Debug("Year: "..  year .. ", month: " .. month)
 	local key = self:HistoryKey(year, month)
 	local playerHistory = self:GetPlayerHistoryDB(self.playerName, true)
 	if playerHistory[key] == nil then
@@ -400,7 +403,7 @@ end
 function GuildTaxes:SendData(data)
 	local message = table.concat(data, "\t")
 	self:Debug("Send (still " .. #self.outgoingQueue .. " in queue): " .. message)
-	SendAddonMessage(MESSAGE_PREFIX, message, "GUILD")
+	C_ChatInfo.SendAddonMessage(MESSAGE_PREFIX, message, "GUILD")
 end
 
 --------------------------------------------------------------------------------

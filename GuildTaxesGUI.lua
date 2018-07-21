@@ -168,7 +168,8 @@ function GUI:RefreshTable()
 		r.months = {}
 		local userHistory = historyDB[shortName]
 		if userHistory ~= nil then
-			local _, month, _, year = CalendarGetDate()
+			local month = tonumber(date("%m"))
+			local year = tonumber(date("%Y"))
 			for i=1, 3 do
 				r.months[i] = userHistory[GuildTaxes:HistoryKey(year, month)]
 				month = month - 1
