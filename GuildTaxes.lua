@@ -199,7 +199,6 @@ function GuildTaxes:GetPlayerHistoryDB(playerName, create)
 end
 
 --------------------------------------------------------------------------------
-
 function GuildTaxes:GetStatus(playerName)
 	local statusDB = self:GetStatusDB()
 	local historyDB = self:GetHistoryDB()
@@ -378,7 +377,7 @@ function GuildTaxes:PayTax()
 	end
 	self.isPayingTax = true
 	self:PrintPayingTax(self:GetTax())
-	DepositGuildBankMoney(self:GetTax())
+	C_Timer.After(0.5, function() DepositGuildBankMoney(tonumber(self:GetTax())) end)
 	self.GUI:UpdatePayedStatus()
 end
 
@@ -386,7 +385,6 @@ end
 function GuildTaxes:WritePaymentToHistory(tax)
 	local month = tonumber(date("%m"))
 	local year = tonumber(date("%Y"))
-	self:Debug("Year: "..  year .. ", month: " .. month)
 	local key = self:HistoryKey(year, month)
 	local playerHistory = self:GetPlayerHistoryDB(self.playerName, true)
 	if playerHistory[key] == nil then
