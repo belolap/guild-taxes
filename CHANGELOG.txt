@@ -1,3 +1,6 @@
+GuildTaxes (0.1.10)
+  * Increase version number for WoW 8.2.0
+
 GuildTaxes (0.1.9)
   * Increase version number for WoW 8.1.5
 
